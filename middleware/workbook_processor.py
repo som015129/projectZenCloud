@@ -383,6 +383,46 @@ def _get_header_row(ws) -> int:
     return 1
 
 
+def _real_bounds(ws, max_gap: int = 10000) -> Tuple[int, int]:
+    """
+    Return the (max_row, max_col) that actually contain data, instead of
+    trusting ws.max_row/max_column.
+
+    Real-world Excel workbooks routinely have a handful of cells stranded
+    far outside their real content block — e.g. one leftover cell near
+    the sheet's absolute row limit, which genuinely exists but drags
+    ws.max_row (and hence any unbounded ws.iter_rows() call) out past a
+    million, even though real data ends a few dozen or few thousand rows
+    in. Iterating over that declared range makes openpyxl backfill a
+    dense grid of empty Cell objects for every position in between — for
+    a sheet like that, tens of millions of objects, enough to exhaust
+    available memory regardless of how much RAM is provisioned.
+
+    The stray cell is real, so simply taking max(populated rows) doesn't
+    help — it reports the same inflated bound as ws.max_row. Instead,
+    walk the sorted populated row numbers (from the sparse `_cells` dict
+    of a freshly loaded, not-yet-iterated sheet) and cut at the first gap
+    wider than `max_gap`: that finds the real contiguous data block and
+    discards outliers stranded beyond it. Verified against a real SF EC
+    workbook: a legitimately dense 40,008-row sheet has zero gaps over
+    50 rows, while a sheet with real content ending at row ~1,062 had a
+    single stray cell at row 1,048,573 — a >1,000,000-row gap.
+    """
+    cells = getattr(ws, "_cells", None)
+    if not cells:
+        return ws.max_row or 1, ws.max_column or 1
+
+    rows = sorted({r for r, _c in cells.keys()})
+    real_max_row = rows[-1]
+    for prev, nxt in zip(rows, rows[1:]):
+        if nxt - prev > max_gap:
+            real_max_row = prev
+            break
+
+    max_c = max((c for r, c in cells.keys() if r <= real_max_row), default=1)
+    return real_max_row, max_c
+
+
 # ── Main public functions ────────────────────────────────────────────────────
 
 async def extract_countries_from_document(file_data_b64: str, file_name: str) -> List[Dict[str, str]]:
@@ -553,9 +593,10 @@ def detect_countries_in_workbooks(slot_files: List[Dict], refs_dir: Path) -> Lis
             ws = wb[sheet_name]
             country_col = info.get("country_col")
             header_row  = info.get("header_row", 1)
+            real_max_row, real_max_col = _real_bounds(ws)
 
             if country_col:
-                for row in ws.iter_rows(min_row=header_row + 1, values_only=True):
+                for row in ws.iter_rows(min_row=header_row + 1, max_row=real_max_row, values_only=True):
                     if len(row) < country_col:
                         continue
                     iso3 = _resolve_iso3(row[country_col - 1])
@@ -567,7 +608,7 @@ def detect_countries_in_workbooks(slot_files: List[Dict], refs_dir: Path) -> Lis
                     iso3 = tab_match.group(1)
                     found[iso3] = found.get(iso3, 0) + 1
                 else:
-                    for row in ws.iter_rows(min_row=header_row + 1, max_col=5, values_only=True):
+                    for row in ws.iter_rows(min_row=header_row + 1, max_row=real_max_row, max_col=min(5, real_max_col), values_only=True):
                         for cv in row:
                             iso3 = _resolve_iso3(cv)
                             if iso3:
@@ -665,10 +706,13 @@ def filter_workbook(
         info = sheet_classification.get(sheet_name, {"type": "global"})
         src_ws = source_wb[sheet_name]
         dst_ws = out_wb.create_sheet(title=sheet_name)
+        real_max_row, real_max_col = _real_bounds(src_ws)
 
         if info["type"] in ("global", "meta"):
-            # Copy everything
-            for row in src_ws.iter_rows():
+            # Copy everything within the sheet's real content bounds — not
+            # ws.max_row/max_column, which can be wildly inflated by a single
+            # stray cell far outside the actual data (see _real_bounds).
+            for row in src_ws.iter_rows(max_row=real_max_row, max_col=real_max_col):
                 for cell in row:
                     dst_cell = dst_ws.cell(row=cell.row, column=cell.column, value=cell.value)
                     if cell.has_style:
@@ -687,7 +731,7 @@ def filter_workbook(
             out_row_idx  = 0
             kept_rows    = 0
 
-            for src_row in src_ws.iter_rows():
+            for src_row in src_ws.iter_rows(max_row=real_max_row, max_col=real_max_col):
                 row_num = src_row[0].row if src_row else 0
 
                 # Always copy rows up to and including header
@@ -840,8 +884,9 @@ def _generate_filtered_workbook_sync(
 
             src_ws  = filtered_wb[sheet_name]
             dst_ws  = out_wb.create_sheet(title=dest_name)
+            real_max_row, real_max_col = _real_bounds(src_ws)
 
-            for row in src_ws.iter_rows():
+            for row in src_ws.iter_rows(max_row=real_max_row, max_col=real_max_col):
                 for cell in row:
                     dst_cell = dst_ws.cell(row=cell.row, column=cell.column, value=cell.value)
                     if cell.has_style:
