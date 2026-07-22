@@ -362,65 +362,85 @@ def _find_country_column(ws) -> Optional[int]:
     Scan the first 5 rows of a sheet to find the column index (1-based)
     whose header most likely represents a country/country-code field.
     Returns None if not found.
+
+    Uses bounded iter_rows() rather than ws.cell(row=, column=) random
+    access — the latter isn't supported on read-only worksheets, which
+    is how sheets are loaded (see load_workbook_from_path): eager-mode
+    loading of a real SF EC workbook was measured at 250-400s, versus
+    15-30s in read-only mode.
     """
-    for row_idx in range(1, 6):
-        for col_idx in range(1, ws.max_column + 1):
-            cell = ws.cell(row=row_idx, column=col_idx)
+    for row in ws.iter_rows(min_row=1, max_row=5):
+        for cell in row:
             if cell.value and isinstance(cell.value, str):
                 header = cell.value.strip().lower()
                 if header in COUNTRY_COL_HEADERS:
-                    return col_idx
+                    return cell.column
     return None
 
 
 def _get_header_row(ws) -> int:
     """Return the 1-based row index of the header row (usually 1 or 2)."""
-    for r in range(1, 5):
-        row_vals = [ws.cell(row=r, column=c).value for c in range(1, min(10, ws.max_column + 1))]
-        non_empty = [v for v in row_vals if v is not None and str(v).strip()]
+    for row in ws.iter_rows(min_row=1, max_row=4):
+        non_empty = [c.value for c in row[:10] if c.value is not None and str(c.value).strip()]
         if len(non_empty) >= 2:
-            return r
+            return row[0].row if row else 1
     return 1
 
 
-def _real_bounds(ws, max_gap: int = 10000) -> Tuple[int, int]:
+def _stream_real_rows(ws, max_gap: int = 10000):
     """
-    Return the (max_row, max_col) that actually contain data, instead of
-    trusting ws.max_row/max_column.
+    Yield (row_idx, [(col_idx, cell), ...]) only for rows that actually
+    contain at least one populated (value or styled) cell, reading the
+    sheet forward and stopping early once `max_gap` consecutive fully-
+    empty rows have been seen.
 
     Real-world Excel workbooks routinely have a handful of cells stranded
     far outside their real content block — e.g. one leftover cell near
     the sheet's absolute row limit, which genuinely exists but drags
-    ws.max_row (and hence any unbounded ws.iter_rows() call) out past a
-    million, even though real data ends a few dozen or few thousand rows
-    in. Iterating over that declared range makes openpyxl backfill a
-    dense grid of empty Cell objects for every position in between — for
-    a sheet like that, tens of millions of objects, enough to exhaust
-    available memory regardless of how much RAM is provisioned.
+    ws.max_row out past a million, even though real data ends a few
+    dozen or few thousand rows in. Naively iterating to ws.max_row would
+    mean streaming through — or, in eager/non-read-only mode, having
+    openpyxl backfill a dense grid of Cell objects for — over a million
+    phantom rows. The early-break-on-gap approach avoids ever reaching
+    that phantom range at all, for both read-only (cheap either way,
+    just avoids wasted iterations) and eager worksheets (avoids the
+    expensive backfill entirely).
 
-    The stray cell is real, so simply taking max(populated rows) doesn't
-    help — it reports the same inflated bound as ws.max_row. Instead,
-    walk the sorted populated row numbers (from the sparse `_cells` dict
-    of a freshly loaded, not-yet-iterated sheet) and cut at the first gap
-    wider than `max_gap`: that finds the real contiguous data block and
-    discards outliers stranded beyond it. Verified against a real SF EC
-    workbook: a legitimately dense 40,008-row sheet has zero gaps over
-    50 rows, while a sheet with real content ending at row ~1,062 had a
-    single stray cell at row 1,048,573 — a >1,000,000-row gap.
+    Verified against a real SF EC workbook: a legitimately dense
+    40,008-row sheet has zero gaps over 50 rows (so is read in full),
+    while a sheet with real content ending at row ~1,062 had a single
+    stray cell at row 1,048,573 — a >1,000,000-row gap that's cut here.
     """
-    cells = getattr(ws, "_cells", None)
-    if not cells:
-        return ws.max_row or 1, ws.max_column or 1
+    empty_streak = 0
+    for row in ws.iter_rows():
+        # Read-only mode yields lightweight EmptyCell placeholders for
+        # blank positions within a row's populated range — they lack
+        # .has_style entirely (only ReadOnlyCell/Cell have it).
+        populated = [(c.column, c) for c in row if c.value is not None or getattr(c, "has_style", False)]
+        if populated:
+            empty_streak = 0
+            yield row[0].row, populated
+        else:
+            empty_streak += 1
+            if empty_streak > max_gap:
+                return
 
-    rows = sorted({r for r, _c in cells.keys()})
-    real_max_row = rows[-1]
-    for prev, nxt in zip(rows, rows[1:]):
-        if nxt - prev > max_gap:
-            real_max_row = prev
-            break
 
-    max_c = max((c for r, c in cells.keys() if r <= real_max_row), default=1)
-    return real_max_row, max_c
+def _detached_style(value):
+    """
+    Return a detached, independently-assignable copy of a Font/Fill/
+    Border/Alignment style value.
+
+    On an eager-mode cell, cell.font (etc.) returns a live StyleProxy
+    tied to that cell's position in the shared style table — copy() is
+    required to get a plain, independently assignable object. On a
+    read-only cell, cell.font already returns a plain, detached object
+    with no .copy() method (AttributeError), because there's no live
+    style table position to be proxying in the first place. Handle both
+    by copying only when the object actually supports it.
+    """
+    copy_fn = getattr(value, "copy", None)
+    return copy_fn() if copy_fn else value
 
 
 # ── Main public functions ────────────────────────────────────────────────────
@@ -547,9 +567,23 @@ async def extract_countries_from_document(file_data_b64: str, file_name: str) ->
 
 
 def load_workbook_from_path(ref_file_path: str) -> Optional[openpyxl.Workbook]:
-    """Load an openpyxl workbook from disk. Returns None on failure."""
+    """
+    Load an openpyxl workbook from disk. Returns None on failure.
+
+    read_only=True: eager (writable) loading was measured at 250-400s
+    against a real ~3.3MB, 32-sheet SF EC workbook, versus 15-30s in
+    read-only mode — eager mode builds a full mutable Cell object graph
+    with resolved styles for every touched position, which is far more
+    expensive than read-only's streaming SAX-based access. Read-only
+    cells still expose .value, .font, .fill, .border, .alignment, and
+    .has_style (verified directly against this workbook), so nothing
+    downstream that only reads cells is affected — only random access
+    via ws.cell(row=, column=) is unavailable, which is why
+    _find_country_column/_get_header_row/_stream_real_rows all use
+    iter_rows() instead.
+    """
     try:
-        return openpyxl.load_workbook(ref_file_path, data_only=True)
+        return openpyxl.load_workbook(ref_file_path, data_only=True, read_only=True)
     except Exception as e:
         print(f"[workbook_processor] load error {ref_file_path}: {e}")
         return None
@@ -593,10 +627,9 @@ def detect_countries_in_workbooks(slot_files: List[Dict], refs_dir: Path) -> Lis
             ws = wb[sheet_name]
             country_col = info.get("country_col")
             header_row  = info.get("header_row", 1)
-            real_max_row, real_max_col = _real_bounds(ws)
 
             if country_col:
-                for row_idx, col_cells in _rows_with_real_cells(ws, real_max_row, real_max_col):
+                for row_idx, col_cells in _stream_real_rows(ws):
                     if row_idx <= header_row:
                         continue
                     for col_idx, cell in col_cells:
@@ -611,7 +644,7 @@ def detect_countries_in_workbooks(slot_files: List[Dict], refs_dir: Path) -> Lis
                     iso3 = tab_match.group(1)
                     found[iso3] = found.get(iso3, 0) + 1
                 else:
-                    for row_idx, col_cells in _rows_with_real_cells(ws, real_max_row, real_max_col):
+                    for row_idx, col_cells in _stream_real_rows(ws):
                         if row_idx <= header_row:
                             continue
                         for col_idx, cell in col_cells:
@@ -688,41 +721,6 @@ def _matches_country(cell_value: Any, in_scope_iso3: set, in_scope_names: set) -
     return False
 
 
-def _rows_with_real_cells(ws, real_max_row: int, real_max_col: int):
-    """
-    Yield (row_idx, [(col_idx, cell), ...]) only for rows that actually
-    contain at least one populated (value or styled) cell, sorted by row
-    then column — built directly from the sheet's sparse, already-
-    materialized `_cells` dict rather than ws.iter_rows().
-
-    ws.iter_rows() always backfills a dense rectangular grid across the
-    full row/col range it's given, even when real content is sparse
-    within it. Verified against a real SF EC "Picklists" sheet: 194,064
-    genuinely populated cells inside a nominally 40,008 x 176 (~7,041,408
-    position) bounding box — iterating that as a dense grid means ~36x
-    more Cell objects created (on both the read and write side) than
-    actually exist, which is enough on its own to make generation take
-    minutes or exhaust memory even after _real_bounds has already cut
-    away a pathological phantom tail.
-    """
-    cells = getattr(ws, "_cells", None)
-    if not cells:
-        for row in ws.iter_rows(max_row=real_max_row, max_col=real_max_col):
-            populated = [(c.column, c) for c in row if c.value is not None or c.has_style]
-            if populated:
-                yield row[0].row, populated
-        return
-
-    by_row: Dict[int, List[Tuple[int, Any]]] = {}
-    for (r, c), cell in cells.items():
-        if r > real_max_row or c > real_max_col:
-            continue
-        by_row.setdefault(r, []).append((c, cell))
-
-    for row_idx in sorted(by_row.keys()):
-        yield row_idx, sorted(by_row[row_idx], key=lambda t: t[0])
-
-
 def filter_workbook(
     source_wb: openpyxl.Workbook,
     in_scope_countries: List[Dict[str, str]],
@@ -748,22 +746,20 @@ def filter_workbook(
         info = sheet_classification.get(sheet_name, {"type": "global"})
         src_ws = source_wb[sheet_name]
         dst_ws = out_wb.create_sheet(title=sheet_name)
-        real_max_row, real_max_col = _real_bounds(src_ws)
 
         if info["type"] in ("global", "meta"):
-            # Copy only genuinely populated cells within the sheet's real
-            # content bounds — not a dense ws.max_row x ws.max_column grid,
-            # which can be orders of magnitude larger than actual content
-            # (see _real_bounds and _rows_with_real_cells).
-            for row_idx, col_cells in _rows_with_real_cells(src_ws, real_max_row, real_max_col):
+            # Copy only genuinely populated cells — not a dense
+            # ws.max_row x ws.max_column grid, which can be orders of
+            # magnitude larger than actual content (see _stream_real_rows).
+            for row_idx, col_cells in _stream_real_rows(src_ws):
                 for col_idx, cell in col_cells:
                     dst_cell = dst_ws.cell(row=row_idx, column=col_idx, value=cell.value)
                     if cell.has_style:
                         try:
-                            dst_cell.font      = cell.font.copy()
-                            dst_cell.fill      = cell.fill.copy()
-                            dst_cell.border    = cell.border.copy()
-                            dst_cell.alignment = cell.alignment.copy()
+                            dst_cell.font      = _detached_style(cell.font)
+                            dst_cell.fill      = _detached_style(cell.fill)
+                            dst_cell.border    = _detached_style(cell.border)
+                            dst_cell.alignment = _detached_style(cell.alignment)
                             dst_cell.number_format = cell.number_format
                         except Exception:
                             pass
@@ -774,7 +770,7 @@ def filter_workbook(
             out_row_idx  = 0
             kept_rows    = 0
 
-            for row_idx, col_cells in _rows_with_real_cells(src_ws, real_max_row, real_max_col):
+            for row_idx, col_cells in _stream_real_rows(src_ws):
                 # Always copy rows up to and including header
                 if row_idx <= header_row:
                     out_row_idx += 1
@@ -782,10 +778,10 @@ def filter_workbook(
                         dst_cell = dst_ws.cell(row=out_row_idx, column=col_idx, value=cell.value)
                         if cell.has_style:
                             try:
-                                dst_cell.font      = cell.font.copy()
-                                dst_cell.fill      = cell.fill.copy()
-                                dst_cell.border    = cell.border.copy()
-                                dst_cell.alignment = cell.alignment.copy()
+                                dst_cell.font      = _detached_style(cell.font)
+                                dst_cell.fill      = _detached_style(cell.fill)
+                                dst_cell.border    = _detached_style(cell.border)
+                                dst_cell.alignment = _detached_style(cell.alignment)
                                 dst_cell.number_format = cell.number_format
                             except Exception:
                                 pass
@@ -818,10 +814,10 @@ def filter_workbook(
                         dst_cell = dst_ws.cell(row=out_row_idx, column=col_idx, value=cell.value)
                         if cell.has_style:
                             try:
-                                dst_cell.font      = cell.font.copy()
-                                dst_cell.fill      = cell.fill.copy()
-                                dst_cell.border    = cell.border.copy()
-                                dst_cell.alignment = cell.alignment.copy()
+                                dst_cell.font      = _detached_style(cell.font)
+                                dst_cell.fill      = _detached_style(cell.fill)
+                                dst_cell.border    = _detached_style(cell.border)
+                                dst_cell.alignment = _detached_style(cell.alignment)
                                 dst_cell.number_format = cell.number_format
                             except Exception:
                                 pass
@@ -932,17 +928,16 @@ def _generate_filtered_workbook_sync(
 
             src_ws  = filtered_wb[sheet_name]
             dst_ws  = out_wb.create_sheet(title=dest_name)
-            real_max_row, real_max_col = _real_bounds(src_ws)
 
-            for row_idx, col_cells in _rows_with_real_cells(src_ws, real_max_row, real_max_col):
+            for row_idx, col_cells in _stream_real_rows(src_ws):
                 for col_idx, cell in col_cells:
                     dst_cell = dst_ws.cell(row=row_idx, column=col_idx, value=cell.value)
                     if cell.has_style:
                         try:
-                            dst_cell.font      = cell.font.copy()
-                            dst_cell.fill      = cell.fill.copy()
-                            dst_cell.border    = cell.border.copy()
-                            dst_cell.alignment = cell.alignment.copy()
+                            dst_cell.font      = _detached_style(cell.font)
+                            dst_cell.fill      = _detached_style(cell.fill)
+                            dst_cell.border    = _detached_style(cell.border)
+                            dst_cell.alignment = _detached_style(cell.alignment)
                             dst_cell.number_format = cell.number_format
                         except Exception:
                             pass
