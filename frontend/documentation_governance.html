@@ -2849,6 +2849,11 @@ function getMirrorAspects(){
 const srv=()=>document.getElementById('serverUrl').value.replace(/\/$/,'');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 
+(function(){
+  const isLocal=['localhost','127.0.0.1'].includes(location.hostname);
+  if(!isLocal) document.getElementById('serverUrl').value='https://projectzen-cloudui.fly.dev';
+})();
+
 async function pingServer(){
   const dot=document.getElementById('sdot'), lbl=document.getElementById('slabel');
   dot.className='sdot checking'; lbl.textContent='Checking…';
