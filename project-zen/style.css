@@ -1,0 +1,349 @@
+:root {
+    --primary-color: #09090b; 
+    --accent-color: #ff9800; 
+    --card-bg: rgba(28, 18, 43, 0.9); /* Deep purple background */
+    --card-border: rgba(138, 43, 226, 0.3); /* Subtle purple border */
+    --text-color: #ffffff;
+    --text-muted: #a09eb0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden; /* Prevent scrolling during splash */
+    background-color: var(--primary-color);
+    color: var(--text-color);
+}
+
+/* Background that acts as splash screen initially */
+#splash-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('assets/bg.png');
+    background-size: cover;
+    background-position: center;
+    z-index: 1; /* Was 100, but now we need intro container on top, and this just stays in background */
+    transition: all 2s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* When splash animation finishes, it becomes the background */
+#splash-bg.background-mode {
+    filter: brightness(0.2) blur(15px);
+    transform: scale(1.05);
+}
+
+#splash-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 2;
+    opacity: 1;
+    transition: opacity 1.5s ease-in-out;
+    pointer-events: none;
+}
+
+#splash-overlay.hidden {
+    opacity: 0;
+}
+
+/* Intro Elements */
+#animated-logo-wrapper {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 95vh;
+    height: 95vh;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: top left;
+    
+    border-radius: 50%;
+    overflow: hidden;
+    opacity: 1; /* Make it visible immediately on load */
+    z-index: 100;
+    transition: opacity 0.3s ease-out;
+}
+
+/* Add the butterfly gradient overlay inside the logo */
+#animated-logo-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    /* Cyan to Magenta split */
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.6) 0%, rgba(213, 0, 249, 0.6) 100%);
+    mix-blend-mode: color; /* Colorizes the underlying image while keeping its texture/lightness */
+    pointer-events: none;
+    z-index: 2; /* Place over the image */
+}
+
+#animated-logo-image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100vw;
+    height: 100vh;
+    transform: translate(-50%, -50%);
+    background-image: url('assets/bg.png');
+    background-size: cover;
+    background-position: center center;
+}
+
+#animated-logo-wrapper.top-left {
+    opacity: 0.2; /* Fades to 20% during the flight */
+    top: 3rem;
+    left: 4rem;
+    transform: translate(0, 0) scale(0.20);
+    
+    /* Adding styles to look like a distinct 3D logo when scaled */
+    border: 6px solid rgba(213, 0, 249, 0.5); /* Magenta border */
+    /* Cyan and Magenta split butterfly glow */
+    box-shadow: -20px 20px 50px rgba(0, 229, 255, 0.6), 
+                20px -20px 50px rgba(213, 0, 249, 0.6), 
+                inset 0 0 50px rgba(138, 43, 226, 0.4);
+    
+    transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+#animated-logo-wrapper.settled {
+    opacity: 1; /* Increases to 100% after reaching the position */
+    transition: opacity 2.5s ease-in-out; /* Increases slowly animatedly */
+}
+
+#animated-text {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Inter', sans-serif;
+    font-size: 6rem;
+    color: #ffffff; /* White post animation */
+    letter-spacing: -2px; /* Tight modern tracking */
+    font-weight: 900; /* Extra bold like screenshot */
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.9), 
+                 -10px 10px 40px rgba(0, 229, 255, 0.5),
+                 10px -10px 40px rgba(213, 0, 249, 0.5);
+    opacity: 0;
+    z-index: 102;
+    transition: all 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+    white-space: nowrap;
+}
+
+#animated-text.visible {
+    opacity: 1;
+}
+
+#animated-text.top-left {
+    /* Position exactly under the logo (logo height is 95vh * 0.20 = 19vh), overlapping slightly */
+    top: calc(3rem + 19vh - 1.5rem); 
+    
+    /* Center it horizontally aligned with the logo (4rem left + half of 19vh) */
+    left: calc(4rem + 9.5vh);
+    
+    /* Keep it centered on its own X axis and scale it down to match previous visual size */
+    transform: translate(-50%, 0) scale(0.40);
+    
+    /* Add a strong downward black shadow + butterfly glow */
+    text-shadow: 0 15px 25px rgba(0, 0, 0, 0.9), 
+                 -10px 10px 40px rgba(0, 229, 255, 0.5),
+                 10px -10px 40px rgba(213, 0, 249, 0.5);
+}
+
+/* Agent text typing cursor effect */
+.agentic-cursor::after {
+    content: '|';
+    animation: blink 1s step-start infinite;
+    color: var(--text-color);
+    text-shadow: none;
+    margin-left: 10px;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+/* Individual letter animation for typing */
+.letter-in {
+    display: inline-block;
+    animation: letterSlam 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.zen-text {
+    color: #a855f7; /* Deeper vibrant purple */
+}
+
+.letter-in.zen-text {
+    animation: letterSlamZen 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes letterSlam {
+    0% {
+        opacity: 0;
+        transform: scale(2) translateY(-30px);
+        color: #d500f9;
+        text-shadow: 0 0 40px #d500f9, 0 0 80px #d500f9;
+        filter: blur(5px);
+    }
+    40% {
+        opacity: 1;
+        transform: scale(0.9) translateY(5px);
+        color: #8a2be2;
+        text-shadow: 0 0 20px rgba(213, 0, 249, 1);
+        filter: blur(0);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        color: #ffffff;
+    }
+}
+
+@keyframes letterSlamZen {
+    0% {
+        opacity: 0;
+        transform: scale(2) translateY(-30px);
+        color: #d500f9;
+        text-shadow: 0 0 40px #d500f9, 0 0 80px #d500f9;
+        filter: blur(5px);
+    }
+    40% {
+        opacity: 1;
+        transform: scale(0.9) translateY(5px);
+        color: #8a2be2;
+        text-shadow: 0 0 20px rgba(213, 0, 249, 1);
+        filter: blur(0);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        color: #a855f7; /* Deeper vibrant purple final state */
+    }
+}
+
+/* Main Content Layout */
+#main-content {
+    position: relative;
+    z-index: 10;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Center vertically */
+    align-items: center;     /* Center horizontally */
+    padding: 3rem;
+    background: radial-gradient(circle at 80% 20%, rgba(138, 43, 226, 0.3) 0%, transparent 60%),
+                radial-gradient(circle at 20% 80%, rgba(213, 0, 249, 0.2) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
+}
+
+#main-content.visible {
+    opacity: 1;
+    overflow-y: auto;
+}
+
+/* Center the grid perfectly */
+.agents-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Agent Card Styles with Glassmorphism */
+.agent-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    flex: 0 1 320px; /* Fixed base width so they center beautifully on the bottom row */
+    padding: 2.5rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0;
+    transform: translateY(50px);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 200px;
+}
+
+/* Card Entrance Animation Class */
+.agent-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Hover Effects */
+.agent-card:hover {
+    transform: translateY(-15px) scale(1.03);
+    background: rgba(255, 255, 255, 0.12);
+    animation: edgeGlowPulse 1.5s infinite alternate;
+}
+
+@keyframes edgeGlowPulse {
+    0% {
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7), 
+                    -5px 5px 15px rgba(0, 229, 255, 0.3), 
+                    5px -5px 15px rgba(213, 0, 249, 0.3), 
+                    inset 0 0 10px rgba(138, 43, 226, 0.1);
+        border-color: rgba(213, 0, 249, 0.4);
+    }
+    100% {
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7), 
+                    -15px 15px 40px rgba(0, 229, 255, 0.8), 
+                    15px -15px 40px rgba(213, 0, 249, 0.8), 
+                    inset 0 0 30px rgba(138, 43, 226, 0.4);
+        border-color: rgba(0, 229, 255, 1);
+    }
+}
+
+.agent-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 50%; height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.15), transparent);
+    transform: skewX(-25deg);
+    transition: 0.6s;
+}
+
+.agent-card:hover::before {
+    left: 200%;
+}
+
+.agent-card h3 {
+    font-size: 1.4rem; /* Adjusted for heavy font weight */
+    color: #ffffff;
+    font-weight: 900; /* Extra Bold matching ProjectZen */
+    letter-spacing: -1px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    margin: 0 0 1.2rem 0;
+    text-align: center;
+}
+
+.agent-card p {
+    color: var(--text-muted);
+    line-height: 1.7;
+    font-size: 1.1rem;
+    text-align: center;
+}

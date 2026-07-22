@@ -1,0 +1,29 @@
+# Secrets
+.env
+middleware/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Runtime data (recreated automatically on startup / stored on Fly volume)
+storage/documents.db
+storage/document_store/
+
+# Stray files from a malformed pip install command
+middleware/=*
+
+# Saved webpage clutter (browser "Save As", not part of the app)
+ProjectZen — Agent Playbook_files/
+ProjectZen Document — Agent Playbook.html
+
+# Claude Code local (personal) settings
+.claude/settings.local.json
+
+# Editor/OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

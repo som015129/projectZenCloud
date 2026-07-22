@@ -1,0 +1,4617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProjectZen &middot; Governance Portal (No Login)</title>
+<style>
+/* ═══════════════════════════════════════════════════════
+   DESIGN SYSTEM — ProjectZen Prototype (Accenture Purple, light)
+   Same token names as before; values remapped to match
+   ProjectZen_UI_Prototype_v1.html's light palette.
+   ═══════════════════════════════════════════════════════ */
+:root {
+  /* Accenture Brand */
+  --acc:       #A100FF;
+  --acc-d:     #7500C0;
+  --acc-l:     #7E22CE;
+  --acc-bg:    #F4ECFB;
+  --acc-b:     #E4D4F5;
+  --acc-glow:  rgba(161,0,255,0.16);
+
+  /* Claude Brand */
+  --claude:    #FF6B2B;
+  --claude-l:  #FF9060;
+  --claude-bg: #FFF1E9;
+  --claude-b:  #FFD9C2;
+
+  /* Neutrals */
+  --bg:        #F6F3FB;
+  --surface:   #FFFFFF;
+  --surface2:  #FAF6FE;
+  --surface3:  #F4ECFB;
+  --border:    #EAE3F2;
+  --border2:   #F0EAF6;
+  --border3:   #DED0F0;
+  --text:      #1A1620;
+  --text2:     #4A4560;
+  --muted:     #6B6577;
+  --muted2:    #7D7593;
+
+  /* Semantic */
+  --green:     #2F8F5B;
+  --green-bg:  #EDF6F0;
+  --green-b:   #A8D9B8;
+  --red:       #C0296B;
+  --red-bg:    #FCEEF3;
+  --red-b:     #F0CBD9;
+  --gold:      #92400E;
+  --gold-bg:   #FFF8EC;
+  --gold-b:    #F0D89A;
+  --blue:      #4D9FFF;
+  --teal:      #0E7C86;
+  --teal-bg:   #E4F2F3;
+  --teal-b:    #BFE3E6;
+
+  /* Supplemental tokens used by turn-badge / library chips */
+  --purple:    #7500C0;
+  --purple-bg: #F4ECFB;
+  --purple-b:  #E4D4F5;
+  --input-bg:  var(--surface2);
+  --card:      var(--surface);
+
+  /* Typography (prototype system stack) */
+  --mono: 'SF Mono',ui-monospace,'Cascadia Code',Consolas,Menlo,monospace;
+  --sans: 'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+
+  /* Shadows */
+  --shadow:    0 1px 2px rgba(70,0,115,.04), 0 8px 24px rgba(70,0,115,.06);
+  --shadow-lg: 0 12px 40px rgba(70,0,115,.14);
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ANIMATED BACKGROUND MESH ── */
+body::before {
+  content: none;
+}
+
+/* ── NOISE TEXTURE OVERLAY ── */
+body::after {
+  content: none;
+}
+
+/* ════════════════════════════════════════════════════════
+   AUTH SCREEN
+════════════════════════════════════════════════════════ */
+.auth-screen {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  isolation: isolate;
+}
+
+/* Left brand panel */
+.auth-brand {
+  width: 44%;
+  min-height: 100vh;
+  background: linear-gradient(160deg, #0D0010 0%, #1A0030 40%, #0D0020 70%, #050008 100%);
+  border-right: 1px solid var(--acc-b);
+  display: flex;
+  flex-direction: column;
+  padding: 48px 52px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Brand panel geometric decoration */
+.auth-brand::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(161,0,255,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.auth-brand::after {
+  content: '';
+  position: absolute;
+  bottom: -100px; left: -60px;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,107,43,0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Accenture logo in brand panel */
+.auth-acc-logo {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 56px;
+  position: relative;
+  z-index: 2;
+}
+
+.acc-wordmark {
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: white;
+}
+
+.acc-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 3px;
+}
+
+.acc-chevron svg { display: block; }
+
+.auth-brand-body { flex: 1; position: relative; z-index: 2; }
+
+.auth-headline {
+  font-family: var(--sans);
+  font-size: clamp(32px, 3.5vw, 48px);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -1px;
+  color: white;
+  margin-bottom: 20px;
+}
+
+.auth-headline em {
+  font-style: italic;
+  background: linear-gradient(135deg, var(--acc-l), var(--claude-l));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.auth-headline-sub {
+  font-size: 15px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.7;
+  margin-bottom: 36px;
+  max-width: 340px;
+}
+
+/* Feature list */
+.auth-features { display: flex; flex-direction: column; gap: 14px; }
+
+.auth-feat {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+  font-weight: 400;
+}
+
+.feat-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: rgba(161,0,255,0.15);
+  border: 1px solid rgba(161,0,255,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* Brand panel footer */
+.auth-brand-foot {
+  position: relative; z-index: 2;
+  margin-top: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.claude-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,107,43,0.10);
+  border: 1px solid var(--claude-b);
+  border-radius: 100px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--claude-l);
+}
+
+.claude-badge-icon {
+  width: 16px; height: 16px;
+  background: linear-gradient(135deg, var(--claude), var(--claude-l));
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  color: white;
+}
+
+/* Right form panel */
+.auth-form-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 56px;
+  position: relative;
+  z-index: 10;
+}
+
+.auth-form-inner { width: 100%; max-width: 420px; }
+
+.auth-form-header { margin-bottom: 32px; }
+
+.auth-title {
+  font-family: var(--sans);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.auth-sub { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+/* Role tabs */
+.role-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.role-tab {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--sans);
+  text-align: left;
+}
+
+.role-tab:hover { border-color: var(--border3); background: var(--surface3); }
+
+.role-tab.active.admin {
+  border-color: var(--gold);
+  background: var(--gold-bg);
+  box-shadow: 0 0 0 1px var(--gold-b), 0 4px 20px rgba(255,184,0,0.12);
+}
+
+.role-tab.active.user {
+  border-color: var(--acc);
+  background: var(--acc-bg);
+  box-shadow: 0 0 0 1px var(--acc-b), 0 4px 20px var(--acc-glow);
+}
+
+.role-tab .ri { font-size: 22px; flex-shrink: 0; }
+.role-tab-info { display: flex; flex-direction: column; gap: 2px; }
+.role-tab .rl { font-size: 13px; font-weight: 600; color: var(--text2); }
+.role-tab .rd { font-size: 11px; color: var(--muted); }
+.role-tab.active.admin .rl { color: var(--gold); }
+.role-tab.active.user  .rl { color: var(--acc-l); }
+
+/* Auth tabs (login/signup) */
+.auth-tabs {
+  display: flex;
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid var(--border2);
+  margin-bottom: 22px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 9px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.auth-tab.active { background: var(--surface3); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+
+/* Form fields */
+.field { margin-bottom: 16px; }
+
+.field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+
+.inp {
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 11px;
+  padding: 13px 16px;
+  color: var(--text);
+  outline: none;
+  transition: all 0.2s;
+}
+
+.inp:focus { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-bg); }
+.inp::placeholder { color: var(--muted2); }
+
+.pw-wrap { position: relative; }
+.pw-wrap .inp { padding-right: 44px; }
+.pw-eye {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 4px;
+}
+.pw-eye:hover { color: var(--text2); }
+
+/* Auth submit button */
+.auth-btn {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  letter-spacing: 0.2px;
+  position: relative;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.auth-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+  pointer-events: none;
+}
+
+.auth-btn.admin {
+  background: linear-gradient(135deg, #FFB800, #FF8C00);
+  color: #1a0a00;
+  box-shadow: 0 4px 20px rgba(255,184,0,0.3);
+}
+
+.auth-btn.admin:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,184,0,0.45); }
+
+.auth-btn.user {
+  background: linear-gradient(135deg, var(--acc), var(--acc-d));
+  color: #fff;
+  box-shadow: 0 4px 20px var(--acc-glow);
+}
+
+.auth-btn.user:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(161,0,255,0.45); }
+.auth-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.auth-err {
+  background: var(--red-bg);
+  border: 1px solid var(--red-b);
+  border-radius: 9px;
+  padding: 11px 14px;
+  font-size: 12px;
+  color: var(--red);
+  margin-top: 12px;
+  display: none;
+  line-height: 1.5;
+}
+.auth-err.show { display: block; }
+
+/* ════════════════════════════════════════════════════════
+   MODAL
+════════════════════════════════════════════════════════ */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 32px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-title {
+  font-family: var(--sans);
+  font-size: 20px; font-weight: 700;
+  color: var(--text); margin-bottom: 5px;
+}
+
+.modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 22px; }
+
+.modal-btns { display: flex; gap: 10px; margin-top: 18px; }
+
+.modal-btn {
+  flex: 1; padding: 11px;
+  border-radius: 10px; border: none;
+  font-family: var(--sans);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+
+.modal-btn.cancel { background: var(--surface2); border: 1px solid var(--border2); color: var(--muted); }
+.modal-btn.cancel:hover { color: var(--text); border-color: var(--border3); }
+.modal-btn.save { background: linear-gradient(135deg, var(--acc), var(--acc-d)); color: #fff; box-shadow: 0 4px 14px var(--acc-glow); }
+.modal-btn.save:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--acc-glow); }
+
+/* ════════════════════════════════════════════════════════
+   APP SCREEN
+════════════════════════════════════════════════════════ */
+.app-screen { display: none; position: relative; z-index: 10; flex-direction: column; align-items: center; }
+.app-screen.show { display: flex; }
+
+/* ── TOPBAR ── */
+.topbar {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.86);
+  border-bottom: 1px solid var(--border2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  height: 58px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+
+/* Accenture wordmark in topbar */
+.topbar-acc {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  white-space: nowrap;
+}
+.topbar-acc b { color: var(--acc); font-weight: 800; }
+
+.topbar-divider {
+  width: 1px; height: 22px;
+  background: var(--border2);
+}
+
+.topbar-product {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-product-icon {
+  width: 22px; height: 22px;
+  background: linear-gradient(135deg, var(--claude), var(--claude-l));
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  color: white;
+  font-weight: 700;
+}
+
+.topbar-product-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text2);
+  letter-spacing: -0.2px;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+.server-row-top { display: flex; align-items: center; gap: 7px; }
+
+.server-inp {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 5px 10px;
+  color: var(--text2);
+  width: 175px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.server-inp:focus { border-color: var(--border3); }
+
+.sdot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted2); transition: background 0.3s; }
+.sdot.on  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.sdot.off { background: var(--red); }
+.sdot.checking { background: var(--gold); animation: gpulse 0.7s infinite; }
+@keyframes gpulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+.slabel { font-size: 11px; color: var(--muted); }
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 100px;
+  padding: 5px 13px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+}
+
+.role-dot { width: 7px; height: 7px; border-radius: 50%; }
+.role-dot.admin { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+.role-dot.user  { background: var(--acc-l); box-shadow: 0 0 6px var(--acc); }
+
+.topbar-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.topbar-btn:hover { border-color: var(--border3); color: var(--text2); }
+.topbar-btn.danger:hover { border-color: var(--red-b); color: var(--red); background: var(--red-bg); }
+
+/* ── PAGE LAYOUT ── */
+.page {
+  width: 100%;
+  max-width: 780px;
+  padding: 48px 24px 100px;
+}
+
+/* ── HERO ── */
+.hero {
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--acc-l);
+  margin-bottom: 16px;
+  background: var(--acc-bg);
+  border: 1px solid var(--acc-b);
+  border-radius: 100px;
+  padding: 5px 14px;
+}
+
+.hero-eyebrow::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--acc-l);
+  box-shadow: 0 0 8px var(--acc);
+  animation: gpulse 2s infinite;
+}
+
+.hero-title {
+  font-family: var(--sans);
+  font-size: clamp(30px, 4.5vw, 50px);
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  line-height: 1.05;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+.hero-title em {
+  font-style: italic;
+  background: linear-gradient(135deg, var(--acc-l) 0%, var(--claude-l) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-sub {
+  font-size: 15px;
+  font-weight: 300;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 540px;
+  margin-bottom: 22px;
+}
+
+.hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.hero-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 100px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+
+/* ── SECTION CARDS ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 10px;
+  position: relative;
+  box-shadow: var(--shadow);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.02), transparent);
+  pointer-events: none;
+}
+
+.card:focus-within { border-color: var(--border3); }
+
+.card.admin-card {
+  border-color: var(--gold-b);
+  background: linear-gradient(135deg, var(--surface) 80%, rgba(255,184,0,0.03) 100%);
+}
+
+.card.user-card {
+  border-color: var(--acc-b);
+  background: linear-gradient(135deg, var(--surface) 80%, rgba(161,0,255,0.04) 100%);
+}
+
+.card.output-card {
+  border-color: var(--teal-b);
+  background: linear-gradient(135deg, var(--surface) 80%, rgba(14,124,134,0.04) 100%);
+}
+
+/* Left accent stripe per card type */
+.card.admin-card::after  { content:''; position:absolute; left:0; top:20%; bottom:20%; width:2px; border-radius:2px; background:linear-gradient(to bottom, transparent, var(--gold), transparent); }
+.card.user-card::after   { content:''; position:absolute; left:0; top:20%; bottom:20%; width:2px; border-radius:2px; background:linear-gradient(to bottom, transparent, var(--acc-l), transparent); }
+.card.output-card::after { content:''; position:absolute; left:0; top:20%; bottom:20%; width:2px; border-radius:2px; background:linear-gradient(to bottom, transparent, var(--teal), transparent); }
+
+.card-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.step-n {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.card.admin-card  .step-n { background: var(--gold-bg);  border-color: var(--gold-b);  color: var(--gold); }
+.card.user-card   .step-n { background: var(--acc-bg);   border-color: var(--acc-b);   color: var(--acc-l); }
+.card.output-card .step-n { background: var(--teal-bg);  border-color: var(--teal-b);  color: var(--teal); }
+
+.label-txt {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+.card.admin-card  .label-txt { color: var(--gold); }
+.card.user-card   .label-txt { color: var(--acc-l); }
+.card.output-card .label-txt { color: var(--teal); }
+
+.badge {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+.badge-req  { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-b); }
+.badge-opt  { background: var(--gold-bg);  color: var(--gold);  border: 1px solid var(--gold-b); }
+.badge-new  { background: var(--acc-bg);   color: var(--acc-l); border: 1px solid var(--acc-b); }
+.badge-adm  { background: var(--gold-bg);  color: var(--gold);  border: 1px solid var(--gold-b); }
+.badge-saved{ background: var(--green-bg); color: var(--green); border: 1px solid var(--green-b); }
+
+/* ── FORM INPUTS ── */
+input[type="text"], select, textarea {
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 400;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: var(--text);
+  outline: none;
+  transition: all 0.2s;
+}
+
+input[type="text"]:focus, select:focus, textarea:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--acc-bg);
+}
+
+input[type="text"]::placeholder, textarea::placeholder { color: var(--muted2); }
+
+select {
+  cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6B90' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 38px;
+}
+
+select option { background: var(--surface2); color: var(--text); }
+textarea { min-height: 110px; line-height: 1.7; resize: vertical; }
+input[type="file"] { display: none; }
+
+/* Saved indicator */
+.saved-indicator { display: none; align-items: center; gap: 7px; margin-top: 8px; font-size: 12px; font-weight: 500; color: var(--green); }
+.saved-indicator.show { display: flex; }
+.saved-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* Admin save row */
+.admin-save-row { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; }
+
+.save-prompt-btn {
+  background: linear-gradient(135deg, var(--gold), #FF8C00);
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a0a00;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.save-prompt-btn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent); pointer-events: none; }
+.save-prompt-btn:hover  { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(255,184,0,0.4); }
+.save-prompt-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.save-prompt-btn.save-btn-success { background: var(--green) !important; border-color: var(--green) !important; color: #fff !important; transform: none; box-shadow: 0 4px 14px rgba(0,200,100,0.35) !important; }
+
+/* Pulled banner */
+.pulled-banner {
+  display: none; align-items: center; gap: 10px;
+  background: var(--gold-bg); border: 1px solid var(--gold-b);
+  border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
+  font-size: 12px; color: var(--gold); line-height: 1.5;
+}
+.pulled-banner.show { display: flex; }
+
+/* ── DROP ZONES ── */
+.drop-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  background: linear-gradient(135deg, transparent, rgba(255,255,255,0.01));
+}
+
+.drop-zone:hover, .drop-zone.drag {
+  border-color: var(--acc);
+  background: var(--acc-bg);
+  box-shadow: 0 0 20px var(--acc-glow);
+}
+
+.drop-zone.filled { border-color: var(--green); border-style: solid; background: var(--green-bg); }
+
+.ref-zone { border-color: var(--acc-b); }
+.ref-zone:hover, .ref-zone.drag { border-color: var(--acc-l); background: var(--acc-bg); }
+.ref-zone.filled { border-color: var(--acc-l); border-style: solid; background: var(--acc-bg); }
+
+.dz-icon { font-size: 22px; margin-bottom: 10px; display: block; transition: transform 0.3s; }
+.drop-zone:hover .dz-icon { transform: scale(1.15); }
+.dz-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.dz-sub   { font-size: 11px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+
+.type-chips { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.chip { font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; }
+.chip.doc { background: rgba(77,159,255,0.1);  border: 1px solid rgba(77,159,255,0.2);  color: var(--blue); }
+.chip.xl  { background: rgba(47,143,91,0.08);  border: 1px solid rgba(47,143,91,0.2);  color: var(--green); }
+.chip.ppt { background: rgba(255,107,43,0.08); border: 1px solid rgba(255,107,43,0.2); color: var(--claude); }
+.chip.pdf { background: rgba(192,41,107,0.08); border: 1px solid rgba(192,41,107,0.2); color: var(--red); }
+.chip.txt { background: rgba(255,255,255,0.04);border: 1px solid var(--border2);        color: var(--muted); }
+.chip.dat { background: rgba(161,0,255,0.08);  border: 1px solid var(--acc-b);          color: var(--acc-l); }
+
+.file-chip { display: none; align-items: center; gap: 10px; border-radius: 10px; padding: 10px 13px; margin-top: 10px; }
+.file-chip.show  { display: flex; }
+.file-chip.green  { background: var(--green-bg); border: 1px solid var(--green-b); }
+.file-chip.purple { background: var(--acc-bg);   border: 1px solid var(--acc-b); }
+.fc-ico  { font-size: 20px; flex-shrink: 0; }
+.fc-info { flex: 1; min-width: 0; }
+.fc-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-chip.green  .fc-name { color: var(--green); }
+.file-chip.purple .fc-name { color: var(--acc-l); }
+.fc-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.fc-rm   { background: none; border: none; color: var(--muted2); cursor: pointer; font-size: 14px; padding: 4px; line-height: 1; flex-shrink: 0; transition: color 0.15s; }
+.fc-rm:hover { color: var(--red); }
+
+.ref-info {
+  background: var(--acc-bg); border: 1px solid var(--acc-b);
+  border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
+  font-size: 12px; color: var(--acc-l); line-height: 1.6;
+  display: flex; gap: 9px; align-items: flex-start;
+}
+
+.mirror-grid { display: none; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 12px; }
+
+.mirror-item {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 500; color: var(--acc-l);
+  background: var(--acc-bg); border: 1px solid var(--acc-b);
+  border-radius: 8px; padding: 7px 10px;
+  cursor: pointer; user-select: none; transition: all 0.15s;
+}
+.mirror-item:hover { background: rgba(161,0,255,0.12); }
+.mirror-item input[type="checkbox"] { width: 13px; height: 13px; accent-color: var(--acc); flex-shrink: 0; padding: 0; background: none; border: none; font-size: inherit; }
+
+/* ── FORMAT GRID ── */
+.fmt-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
+
+.fmt-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 16px 8px 14px;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transition: all 0.2s;
+  font-family: var(--sans);
+  position: relative; overflow: hidden;
+}
+
+.fmt-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent); pointer-events: none; }
+.fmt-btn:hover { border-color: var(--border3); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+.fmt-btn.on { border-color: var(--acc); background: var(--acc-bg); box-shadow: 0 0 0 1px var(--acc-b), 0 8px 24px var(--acc-glow); }
+
+.fmt-ico  { font-size: 24px; }
+.fmt-name { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text); }
+.fmt-desc { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.3; }
+
+/* ── GENERATE BUTTON ── */
+.gen-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--acc) 0%, #5B00CC 50%, var(--acc-d) 100%);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 18px;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+  position: relative; overflow: hidden;
+  box-shadow: 0 4px 24px rgba(161,0,255,0.3);
+}
+
+.gen-btn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent); pointer-events: none; }
+.gen-btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(161,0,255,0.5); }
+.gen-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── PROGRESS ── */
+.prog-card { display: none; background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 22px 24px; margin-top: 10px; box-shadow: var(--shadow); }
+.prog-card.show { display: block; animation: fadeUp 0.3s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+.prog-lbl {
+  font-family: var(--mono); font-size: 10px; color: var(--acc);
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.prog-lbl::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
+
+.step { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.step:last-of-type { border: none; }
+.step-pip { width: 8px; height: 8px; border-radius: 50%; background: var(--muted2); flex-shrink: 0; transition: all 0.3s; }
+.step.active .step-pip { background: var(--acc); box-shadow: 0 0 8px var(--acc); animation: gpulse 1s infinite; }
+.step.done   .step-pip { background: var(--green); box-shadow: 0 0 6px var(--green); animation: none; }
+.step.err    .step-pip { background: var(--red); }
+.step-txt  { font-size: 12px; font-weight: 400; color: var(--muted); flex: 1; transition: color 0.2s; }
+.step.active .step-txt { color: var(--text); font-weight: 500; }
+.step.done   .step-txt { color: var(--green); }
+.step.err    .step-txt { color: var(--red); }
+.step-t { font-family: var(--mono); font-size: 10px; color: var(--muted2); }
+
+/* ── RESULT ── */
+.err-box { display: none; background: var(--red-bg); border: 1px solid var(--red-b); border-radius: 10px; padding: 12px 15px; margin-top: 10px; font-size: 12px; color: var(--red); line-height: 1.6; }
+.err-box.show { display: block; }
+
+.result-card {
+  display: none;
+  background: linear-gradient(135deg, var(--surface) 0%, var(--green-bg) 100%);
+  border: 1px solid var(--green-b);
+  border-radius: 16px; padding: 24px; margin-top: 10px;
+  box-shadow: var(--shadow);
+}
+.result-card.show { display: block; animation: fadeUp 0.4s ease; }
+
+.result-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+
+.result-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--green); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.result-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+.result-name { font-family: var(--sans); font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+.result-meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+.dl-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--green), #00B880);
+  color: #001a12; border: none; border-radius: 10px; padding: 12px 20px;
+  font-family: var(--sans); font-size: 12px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(47,143,91,0.3);
+}
+.dl-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(47,143,91,0.4); }
+
+.preview-lbl { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.preview-txt {
+  background: var(--surface2); border: 1px solid var(--green-b);
+  border-radius: 8px; padding: 12px 14px;
+  font-family: var(--mono); font-size: 11px; line-height: 1.7;
+  color: var(--text2); max-height: 140px; overflow-y: auto;
+  white-space: pre-wrap; opacity: 0.9;
+}
+
+/* ── SPINNER ── */
+.spin { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.25); border-top-color: #fff; border-radius: 50%; animation: rot 0.65s linear infinite; display: inline-block; }
+@keyframes rot { to{transform:rotate(360deg)} }
+
+/* ── FOOTER ── */
+.page-footer {
+  text-align: center;
+  margin-top: 48px;
+  padding: 28px 0 0;
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+
+.footer-logos {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.footer-acc {
+  display: flex; align-items: center; gap: 3px; opacity: 0.55;
+  font-family: var(--sans); font-size: 12px; font-weight: 700;
+  color: var(--muted2); letter-spacing: -0.2px;
+}
+
+.footer-sep { font-size: 16px; color: var(--muted2); }
+
+.footer-claude {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--muted2); font-weight: 500; opacity: 0.7;
+}
+
+.footer-claude-icon {
+  width: 16px; height: 16px;
+  background: linear-gradient(135deg, var(--claude), var(--claude-l));
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; color: white; font-weight: 700;
+}
+
+.footer-txt { font-size: 11px; color: var(--muted2); line-height: 1.7; }
+.footer-txt a { color: var(--muted); text-decoration: none; }
+.footer-txt a:hover { color: var(--acc-l); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: var(--surface2); border: 1px solid var(--green-b);
+  border-radius: 12px; padding: 12px 22px;
+  font-size: 13px; font-weight: 500; color: var(--green);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s;
+  opacity: 0; z-index: 999; pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 700px) {
+  .auth-brand { display: none; }
+  .auth-form-panel { padding: 32px 28px; }
+  .topbar { padding: 0 16px; }
+  .server-row-top { display: none; }
+  .topbar-product-name { display: none; }
+  .page { padding: 32px 16px 80px; }
+  .fmt-grid { grid-template-columns: repeat(3,1fr); }
+}
+
+/* ── TOGGLE SWITCH ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .2s;
+}
+.toggle-row:hover { border-color: var(--border3); }
+.toggle-row.active { border-color: var(--acc-b); background: var(--acc-bg); }
+
+.toggle-switch {
+  position: relative;
+  width: 44px; height: 24px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity:0; width:0; height:0; position:absolute; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: var(--muted2);
+  border-radius: 100px;
+  transition: background .25s;
+}
+.toggle-switch input:checked + .toggle-track { background: var(--acc); box-shadow: 0 0 8px var(--acc-glow); }
+.toggle-thumb {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+}
+.toggle-switch input:checked ~ .toggle-thumb { transform: translateX(20px); }
+.toggle-label-wrap { flex: 1; }
+.toggle-label-main { font-size: 13px; font-weight: 600; color: var(--text2); }
+.toggle-row.active .toggle-label-main { color: var(--acc-l); }
+.toggle-label-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+/* saved-config banner */
+.saved-config-row {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--green-bg);
+  border: 1px solid var(--green-b);
+  border-radius: 9px;
+  font-size: 11px;
+  color: var(--green);
+  line-height: 1.5;
+}
+.saved-config-row.show { display: flex; }
+
+/* storage warning */
+.store-warn {
+  display: none;
+  background: rgba(255,184,0,.07);
+  border: 1px solid var(--gold-b);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--gold);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.store-warn.show { display: block; }
+
+/* user ref toggle area */
+.user-ref-zone { display: none; margin-top: 12px; animation: fadeUp .3s ease; }
+.user-ref-zone.show { display: block; }
+
+/* ── ASSISTANT PROMPT / META-PROMPT ── */
+.asst-card {
+  display: none;
+  background: linear-gradient(135deg, var(--surface) 80%, rgba(34,211,238,.04) 100%);
+  border: 1px solid var(--teal-b);
+  border-radius: 14px;
+  padding: 20px 22px;
+  margin-bottom: 10px;
+  position: relative;
+}
+.asst-card.show { display: block; }
+.asst-card::after {
+  content: '';
+  position: absolute; left: 0; top: 20%; bottom: 20%;
+  width: 2px; border-radius: 2px;
+  background: linear-gradient(to bottom, transparent, var(--teal), transparent);
+}
+
+/* ── CONVERSATION HISTORY ── */
+.conv-panel {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.conv-panel.show { display: block; }
+
+.conv-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border2);
+  cursor: pointer;
+  user-select: none;
+}
+.conv-header:hover { background: rgba(255,255,255,.02); }
+
+.conv-header-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 1;
+}
+.conv-turn-count {
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--teal-bg);
+  color: var(--teal);
+  border: 1px solid var(--teal-b);
+  border-radius: 100px;
+  padding: 2px 10px;
+}
+.conv-chevron {
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform .2s;
+}
+.conv-chevron.open { transform: rotate(180deg); }
+
+.conv-body { display: none; padding: 0 20px 16px; }
+.conv-body.open { display: block; }
+
+.conv-turn {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.conv-turn:last-child { border: none; }
+
+.turn-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.turn-badge.t1 { background: var(--accent-bg); color: var(--acc-l); border: 1px solid var(--acc-b); }
+.turn-badge.t2 { background: var(--teal-bg);   color: var(--teal);  border: 1px solid var(--teal-b); }
+.turn-badge.t3 { background: var(--purple-bg); color: var(--purple);border: 1px solid var(--purple-b); }
+
+.turn-content { flex: 1; min-width: 0; }
+.turn-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+}
+.turn-summary {
+  font-size: 12px; color: var(--text2); line-height: 1.5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.turn-file {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--green);
+  background: var(--green-bg); border: 1px solid var(--green-b);
+  border-radius: 6px; padding: 2px 8px; margin-top: 5px; cursor: pointer;
+}
+.turn-file:hover { filter: brightness(1.15); }
+
+.conv-clear-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600;
+  color: var(--red); background: var(--red-bg);
+  border: 1px solid var(--red-b); border-radius: 7px;
+  padding: 5px 11px; cursor: pointer; transition: all .15s;
+  margin-top: 10px;
+}
+.conv-clear-btn:hover { filter: brightness(1.15); }
+
+/* ── DUAL GENERATE BUTTONS ── */
+.gen-btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.gen-btn { flex: 1; margin-top: 0; }
+.refine-btn {
+  display: none;
+  flex: 1;
+  background: linear-gradient(135deg, var(--teal), #00A8CC);
+  color: #001820;
+  border: none;
+  border-radius: 12px;
+  padding: 16px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .25s;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  letter-spacing: .2px;
+  position: relative; overflow: hidden;
+  box-shadow: 0 4px 20px rgba(14,124,134,.2);
+}
+.refine-btn::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(255,255,255,.12),transparent); pointer-events:none; }
+.refine-btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 10px 28px rgba(14,124,134,.35); }
+.refine-btn:disabled { opacity:.35; cursor:not-allowed; transform:none; box-shadow:none; }
+.refine-btn.show { display: flex; }
+
+/* ── META-PROMPT ACTIVATION NOTIFICATION ── */
+.meta-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(14,124,134,0.10), rgba(161,0,255,0.08));
+  border: 1px solid var(--teal-b);
+  border-left: 3px solid var(--teal);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-top: 10px;
+  animation: metaSlideIn 0.5s cubic-bezier(0.16,1,0.3,1);
+  display: none;
+}
+.meta-toast.show { display: flex; }
+@keyframes metaSlideIn {
+  from { opacity:0; transform:translateY(-10px) scale(0.98); }
+  to   { opacity:1; transform:translateY(0)    scale(1); }
+}
+.meta-toast-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  animation: metaSpin 2s linear infinite;
+}
+@keyframes metaSpin {
+  0%   { transform: rotate(0deg); }
+  25%  { transform: rotate(10deg); }
+  75%  { transform: rotate(-10deg); }
+  100% { transform: rotate(0deg); }
+}
+.meta-toast-body { flex: 1; }
+.meta-toast-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal);
+  margin-bottom: 4px;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.meta-live-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 8px var(--teal);
+  animation: gpulse 1s infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.meta-toast-desc {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+.meta-toast-turn {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--teal);
+  background: var(--teal-bg);
+  border: 1px solid var(--teal-b);
+  border-radius: 100px;
+  padding: 2px 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* ── AUTH LOGIN PAGE — meta-prompt feature badge ── */
+.auth-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(14,124,134,0.10), rgba(161,0,255,0.08));
+  border: 1px solid var(--teal-b);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-top: 20px;
+  width: 100%;
+}
+.auth-meta-badge-icon { font-size: 18px; flex-shrink: 0; }
+.auth-meta-badge-text { flex: 1; }
+.auth-meta-badge-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--teal);
+  margin-bottom: 2px;
+}
+.auth-meta-badge-desc {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── AUTH BRAND PANEL — feature chips ── */
+.auth-feature-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 24px;
+}
+.auth-chip {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.05);
+}
+.auth-chip.highlight {
+  border-color: rgba(14,124,134,0.4);
+  color: var(--teal);
+  background: rgba(14,124,134,0.08);
+}
+
+/* ── PROJECT ZEN LOGO ─────────────────────────────────────── */
+.pz-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  text-decoration: none;
+  position: relative;
+}
+
+/* Auth brand panel — large hero logo */
+.pz-logo-hero {
+  height: 104px;       /* doubled from 52px */
+  width: auto;
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  filter:
+    drop-shadow(0 0 6px rgba(180,0,255,0.55))
+    drop-shadow(0 2px 8px rgba(0,0,0,0.70))
+    brightness(1.10) contrast(1.08);
+  transition: filter 0.25s ease;
+}
+.pz-logo-hero:hover {
+  filter:
+    drop-shadow(0 0 12px rgba(200,0,255,0.80))
+    drop-shadow(0 3px 10px rgba(0,0,0,0.85))
+    brightness(1.18) contrast(1.10);
+}
+
+/* Topbar — compact logo */
+.pz-logo-topbar {
+  height: 38px;
+  width: auto;
+  display: block;
+  filter:
+    drop-shadow(0 0 10px rgba(180,0,255,0.65))
+    drop-shadow(0 0 24px rgba(140,0,220,0.28))
+    drop-shadow(0 2px 10px rgba(0,0,0,0.85))
+    brightness(1.10) contrast(1.05);
+  transition: filter 0.25s ease;
+}
+.pz-logo-topbar:hover {
+  filter:
+    drop-shadow(0 0 18px rgba(200,0,255,0.85))
+    drop-shadow(0 0 36px rgba(160,0,240,0.45))
+    drop-shadow(0 3px 12px rgba(0,0,0,0.9))
+    brightness(1.18) contrast(1.08);
+}
+
+/* Footer — small muted logo */
+.pz-logo-footer {
+  height: 28px;
+  width: auto;
+  display: block;
+  opacity: 0.65;
+  filter:
+    drop-shadow(0 0 8px rgba(180,0,255,0.50))
+    drop-shadow(0 2px 8px rgba(0,0,0,0.75))
+    brightness(1.05);
+  transition: opacity 0.25s, filter 0.25s;
+}
+.pz-logo-footer:hover {
+  opacity: 1.0;
+  filter:
+    drop-shadow(0 0 14px rgba(200,0,255,0.75))
+    drop-shadow(0 3px 10px rgba(0,0,0,0.85))
+    brightness(1.12);
+}
+
+/* Glow ring behind logo on auth panel */
+.pz-logo-topleft {
+  display: flex;
+  align-items: center;
+  margin-bottom: 36px;
+}
+
+/* ── DOCUMENT LIBRARY ──────────────────────────────────── */
+.library-panel {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: none;
+}
+.library-panel.show { display: block; animation: fadeUp .3s ease; }
+
+.library-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border2);
+  cursor: pointer; user-select: none;
+  background: linear-gradient(135deg, var(--surface) 80%, rgba(161,0,255,.04));
+}
+.library-header:hover { background: rgba(255,255,255,.02); }
+.library-header-lbl {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--acc-l); flex: 1;
+}
+.library-count {
+  font-size: 11px; font-weight: 600;
+  background: var(--acc-bg); color: var(--acc-l);
+  border: 1px solid var(--acc-b); border-radius: 100px; padding: 2px 10px;
+}
+.library-refresh {
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 14px; padding: 4px 8px; transition: color .15s;
+}
+.library-refresh:hover { color: var(--acc-l); }
+.library-chevron { font-size: 11px; color: var(--muted); transition: transform .2s; }
+.library-chevron.open { transform: rotate(180deg); }
+
+.library-body { display: none; padding: 0 16px 14px; }
+.library-body.open { display: block; }
+
+/* Filter row */
+.lib-filters {
+  display: flex; gap: 8px; align-items: center;
+  padding: 12px 0 8px; flex-wrap: wrap;
+}
+.lib-filter-inp {
+  flex: 1; min-width: 140px;
+  font-family: var(--sans); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 7px 12px; color: var(--text); outline: none;
+  transition: border-color .15s;
+}
+.lib-filter-inp:focus { border-color: var(--acc); }
+.lib-filter-inp::placeholder { color: var(--muted2); }
+.lib-format-sel {
+  font-family: var(--sans); font-size: 12px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 7px 28px 7px 12px; color: var(--text);
+  outline: none; cursor: pointer; min-width: 100px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B6B90' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+
+/* Document rows */
+.lib-empty {
+  text-align: center; padding: 28px; font-size: 12px; color: var(--muted);
+}
+.lib-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+.lib-table th {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--muted);
+  padding: 8px 10px; text-align: left;
+  border-bottom: 1px solid var(--border2);
+}
+.lib-table td {
+  font-size: 11px; color: var(--text2);
+  padding: 9px 10px; border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.lib-table tr:last-child td { border: none; }
+.lib-table tr:hover td { background: rgba(255,255,255,.02); }
+
+/* ── Ask Library tab ─────────────────────────────────────── */
+.main-tabs { display:flex; gap:8px; margin-bottom:18px; }
+.main-tab  {
+  padding:8px 22px; border-radius:8px; border:1px solid var(--border2);
+  background:var(--card); color:var(--muted); font-size:13px; font-weight:600;
+  cursor:pointer; letter-spacing:.5px; transition:all .2s;
+}
+.main-tab.on {
+  border-color:var(--acc); background:var(--acc-bg);
+  color:var(--acc); box-shadow:0 0 0 1px var(--acc-b),0 4px 16px var(--acc-glow);
+}
+.tab-panel { display:none; }
+.tab-panel.on { display:block; }
+
+.ask-wrap   { display:flex; flex-direction:column; gap:14px; }
+.ask-input-row { display:flex; gap:10px; align-items:flex-end; }
+.ask-textarea {
+  flex:1; min-height:64px; max-height:160px; resize:vertical;
+  background:var(--input-bg); border:1px solid var(--border2);
+  border-radius:10px; padding:12px 14px; color:var(--text);
+  font-size:14px; line-height:1.5; font-family:inherit;
+}
+.ask-textarea:focus { outline:none; border-color:var(--acc); box-shadow:0 0 0 2px var(--acc-glow); }
+.ask-btn {
+  padding:12px 24px; border-radius:10px; border:none;
+  background:linear-gradient(135deg,var(--acc),#7c3aed);
+  color:#fff; font-size:14px; font-weight:700; cursor:pointer;
+  white-space:nowrap; transition:opacity .2s;
+}
+.ask-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+.ask-results {
+  background:var(--card); border:1px solid var(--border2);
+  border-radius:12px; padding:18px; min-height:80px;
+  font-size:14px; line-height:1.7; color:var(--text);
+  white-space:pre-wrap; word-break:break-word;
+}
+.ask-results.empty { color:var(--muted); font-style:italic; }
+.ask-spinner { display:inline-block; animation:spin 1s linear infinite; margin-right:8px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.ask-doc-links { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+.ask-doc-link  {
+  display:flex; align-items:center; gap:10px; padding:10px 14px;
+  background:var(--acc-bg); border:1px solid var(--acc-b);
+  border-radius:8px; text-decoration:none; color:var(--acc);
+  font-size:13px; font-weight:600; transition:opacity .2s;
+}
+.ask-doc-link:hover { opacity:.8; }
+.ask-doc-link .dl-ico { font-size:16px; }
+
+.ask-meta { font-size:11px; color:var(--muted); margin-top:6px; }
+
+.ask-examples { display:flex; flex-wrap:wrap; gap:8px; }
+.ask-example  {
+  padding:6px 14px; border-radius:20px; border:1px solid var(--border2);
+  background:var(--card); color:var(--muted); font-size:12px;
+  cursor:pointer; transition:all .15s;
+}
+.ask-example:hover { border-color:var(--acc); color:var(--acc); }
+.lib-fname {
+  font-weight: 500; color: var(--text);
+  max-width: 260px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.lib-template { color: var(--acc-l); font-size: 10px; margin-top: 2px; }
+.lib-fmt-chip {
+  font-size: 9px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; padding: 2px 7px; border-radius: 4px;
+  display: inline-block;
+}
+.lib-fmt-xlsx { background:rgba(47,143,91,.08);  color:var(--green);  border:1px solid var(--green-b); }
+.lib-fmt-docx { background:rgba(77,159,255,.08); color:var(--blue);   border:1px solid rgba(77,159,255,.2); }
+.lib-fmt-pdf  { background:rgba(192,41,107,.08); color:var(--red);    border:1px solid var(--red-b); }
+.lib-fmt-pptx { background:rgba(255,107,43,.08); color:var(--claude); border:1px solid var(--claude-b); }
+.lib-fmt-xml  { background:var(--purple-bg);     color:var(--purple); border:1px solid var(--purple-b); }
+.lib-dl-btn {
+  background: none; border: 1px solid var(--border2);
+  border-radius: 7px; padding: 5px 10px; font-size: 11px;
+  color: var(--muted); cursor: pointer; transition: all .15s;
+  font-family: var(--sans); white-space: nowrap;
+}
+.lib-dl-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+
+/* ── Document Grounding Panel ──────────────────────────────────────────────── */
+.grnd-header {
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:16px; margin-bottom:14px;
+}
+.grnd-title {
+  font-size:17px; font-weight:700; color:var(--text1); margin-bottom:4px;
+}
+.grnd-sub { font-size:12px; color:var(--muted); max-width:560px; line-height:1.5; }
+.grnd-stats { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.grnd-stat-box { display:flex; flex-direction:column; align-items:center; gap:2px;
+  background:var(--surface2); border:1px solid var(--border2); border-radius:10px;
+  padding:8px 14px; }
+.grnd-stat-num { font-size:22px; font-weight:700; color:var(--gold); }
+.grnd-stat-lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+.grnd-stat-sep { font-size:20px; color:var(--muted); font-weight:300; }
+.grnd-legend {
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  padding:8px 12px; background:var(--surface2); border:1px solid var(--border2);
+  border-radius:8px; margin-bottom:14px;
+}
+.grnd-leg-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text2); }
+.grnd-leg-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.grnd-dot-yes { background:#16a34a; box-shadow:0 0 7px #22c55ecc; border:2px solid #16a34a; }
+.grnd-dot-no  { background:transparent; border:2px dashed #94a3b8; opacity:0.6; }
+.grnd-layout {
+  display:grid; grid-template-columns:1fr 320px; gap:14px; align-items:start;
+}
+.grnd-graph-wrap {
+  background:#f8f9fa; border:1px solid #cbd5e1; border-radius:12px;
+  overflow:hidden; position:relative; display:flex; flex-direction:column;
+}
+/* inner container that holds SVG swimlanes + Cytoscape canvas */
+.grnd-cy-container {
+  position:relative; height:520px; overflow:hidden;
+  /* NOTE: no flex:1 here — flex-basis:0 would collapse height:520px to 0.
+     flex:1 is applied only in the fullscreen override where parent is 100vh. */
+}
+#grndSwimlaneSvg {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  pointer-events:none; z-index:0;
+}
+#grndCy {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  z-index:1; background:transparent;
+}
+.grnd-cy-hint {
+  position:absolute; bottom:8px; right:12px; font-size:10px; color:#64748b;
+  pointer-events:none; background:rgba(248,249,250,.82); border-radius:4px; padding:2px 6px;
+  z-index:20;
+}
+
+/* ── Expand button ───────────────────────────────────────── */
+.grnd-expand-btn {
+  position:absolute; top:8px; right:8px; z-index:10;
+  display:flex; align-items:center; gap:5px;
+  background:var(--surface2); border:1px solid var(--border3);
+  border-radius:7px; padding:5px 10px; font-size:12px; font-weight:500;
+  color:var(--text2); cursor:pointer; transition:all .15s;
+}
+.grnd-expand-btn:hover { border-color:var(--gold); color:var(--gold); background:var(--gold-bg); }
+
+/* ── Fullscreen bar (shown only when fullscreen is active) ── */
+.grnd-fullscreen-bar {
+  display:none; align-items:center; justify-content:space-between;
+  padding:0 14px; height:44px; flex-shrink:0;
+  background:var(--surface2); border-bottom:1px solid var(--border2);
+}
+.grnd-fullscreen-bar span { font-size:13px; font-weight:600; color:var(--text2); }
+.grnd-close-btn {
+  background:transparent; border:1px solid var(--border3); border-radius:7px;
+  padding:5px 12px; font-size:12px; color:var(--muted); cursor:pointer; transition:all .15s;
+}
+.grnd-close-btn:hover { border-color:#ff4d6a; color:#ff4d6a; }
+
+/* ── Fullscreen active state ─────────────────────────────── */
+.grnd-graph-wrap.grnd-fullscreen {
+  position:fixed; top:0; left:0; width:100vw; height:100vh;
+  z-index:9999; border-radius:0; border:none;
+  display:flex; flex-direction:column; background:#f8f9fa;
+}
+.grnd-graph-wrap.grnd-fullscreen .grnd-fullscreen-bar { display:flex; }
+.grnd-graph-wrap.grnd-fullscreen .grnd-cy-container { height:calc(100vh - 44px); flex:1; }
+.grnd-graph-wrap.grnd-fullscreen .grnd-expand-btn { display:none; }
+.grnd-graph-wrap.grnd-fullscreen .grnd-cy-hint { bottom:14px; right:18px; }
+
+/* ── Hover ancestor / descendant highlighting ───────────────── */
+.grnd-graph-wrap { --ancestor-col:#2563eb; --descendant-col:#d97706; }
+
+/* ── ProjectZen logo in grounding panel ─────────────────── */
+.grnd-pz-logo-img {
+  height:26px; width:auto; display:block; opacity:0.9;
+  filter: drop-shadow(0 0 5px rgba(161,0,255,0.45)) brightness(1.05);
+}
+.grnd-fullscreen-bar .grnd-pz-logo-img { height:30px; }
+
+/* Side drawer */
+.grnd-drawer {
+  background:var(--surface); border:1px solid var(--border2); border-radius:12px;
+  padding:16px; min-height:300px; display:flex; flex-direction:column;
+}
+.grnd-drawer-empty {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; text-align:center; padding:24px 12px;
+}
+.grnd-drawer-detail { display:flex; flex-direction:column; gap:14px; }
+.grnd-node-header {
+  display:flex; align-items:center; gap:12px;
+  padding-bottom:12px; border-bottom:1px solid var(--border2);
+}
+.grnd-node-abbr {
+  width:48px; height:48px; border-radius:10px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; background:var(--gold-bg);
+  border:1px solid var(--gold-b); color:var(--gold); letter-spacing:.03em;
+}
+.grnd-node-label { font-size:14px; font-weight:600; color:var(--text1); margin-bottom:3px; }
+.grnd-node-meta  { font-size:11px; color:var(--muted); }
+.grnd-current-doc {
+  background:var(--surface2); border:1px solid #22c55e40; border-radius:8px;
+  padding:10px 12px;
+}
+.grnd-current-title { font-size:10px; text-transform:uppercase; letter-spacing:.06em;
+  color:#22c55e; margin-bottom:8px; font-weight:600; }
+.grnd-current-row { display:flex; align-items:center; gap:10px; }
+.grnd-file-icon { font-size:22px; flex-shrink:0; }
+.grnd-file-info { flex:1; min-width:0; }
+.grnd-file-name { font-size:12px; font-weight:600; color:var(--text1);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.grnd-file-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+.grnd-remove-btn {
+  background:transparent; border:1px solid var(--danger); color:var(--danger);
+  border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;
+  flex-shrink:0; transition:all .15s; white-space:nowrap;
+}
+.grnd-remove-btn:hover { background:var(--danger); color:#fff; }
+.grnd-no-doc {
+  padding:8px 12px; background:var(--surface2); border:1px dashed var(--border2);
+  border-radius:8px; text-align:center;
+}
+.grnd-upload-title {
+  font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--muted);
+}
+.grnd-drop-zone {
+  border:2px dashed var(--border3); border-radius:10px; padding:20px 12px;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  cursor:pointer; transition:all .2s; text-align:center;
+}
+.grnd-drop-zone.drag-over {
+  border-color:var(--gold); background:var(--gold-bg);
+}
+.grnd-drop-icon { font-size:24px; }
+.grnd-drop-text { font-size:13px; font-weight:600; color:var(--text2); }
+.grnd-drop-hint { font-size:11px; color:var(--muted); }
+.grnd-browse-btn {
+  margin-top:4px; background:var(--surface3); border:1px solid var(--border3);
+  border-radius:6px; padding:6px 14px; font-size:12px; color:var(--text2);
+  cursor:pointer; transition:all .15s; font-family:var(--sans);
+}
+.grnd-browse-btn:hover { border-color:var(--gold); color:var(--gold); }
+.grnd-upload-prog { display:flex; flex-direction:column; gap:6px; }
+.grnd-prog-bar {
+  height:6px; background:var(--surface3); border-radius:3px; overflow:hidden;
+}
+.grnd-prog-fill {
+  height:100%; width:0%; background:linear-gradient(90deg,var(--gold),#FF8C00);
+  border-radius:3px; transition:width .3s ease;
+}
+.grnd-prog-lbl { font-size:11px; color:var(--muted); text-align:center; }
+
+/* Grounding graph hover tooltip — dark pill over light graph */
+.grnd-tooltip {
+  position:absolute; pointer-events:none; z-index:100;
+  background:#1e293b; border:1px solid #334155;
+  border-radius:8px; padding:7px 13px;
+  font-size:12px; font-weight:500; color:#f1f5f9;
+  white-space:nowrap; box-shadow:0 4px 16px rgba(0,0,0,.40);
+  line-height:1.55;
+  opacity:0; transition:opacity .12s ease;
+  transform:translate(14px,-50%); max-width:280px;
+}
+.grnd-tooltip strong { font-weight:700; font-size:12.5px; }
+.grnd-tooltip.visible { opacity:1; }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════ APP SCREEN ════════════════ -->
+<div class="app-screen show" id="appScreen">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-acc">
+        Project<b>Zen</b>
+      </div>
+      <div class="topbar-divider"></div>
+      <div class="topbar-product">
+        <div class="topbar-product-icon">✦</div>
+        <span class="topbar-product-name">Governance Portal</span>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="server-row-top">
+        <input type="text" class="server-inp" id="serverUrl" value="http://localhost:8000" />
+        <button class="topbar-btn" onclick="pingServer()">Ping</button>
+        <div class="sdot" id="sdot"></div>
+        <span class="slabel" id="slabel">—</span>
+      </div>
+      <div class="user-badge" id="userBadge">
+        <div class="role-dot user"></div>
+        <input type="text" id="govUsername" value="guest" placeholder="Your name"
+               style="background:transparent;border:none;color:var(--text);font-size:12px;font-family:var(--sans);width:90px;outline:none"
+               oninput="session.username=this.value.trim()||'guest'; session.name=session.username;" />
+      </div>
+      <span style="font-size:10px;color:var(--muted);border:1px solid var(--border2);border-radius:20px;padding:4px 10px;letter-spacing:.5px">No login required</span>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-eyebrow" id="heroKicker">Powered by Claude AI</div>
+      <h1 class="hero-title">Generate <em>any document</em>,<br>with enterprise precision.</h1>
+      <p class="hero-sub" id="heroSub">Select a Template, upload your source data, and let Claude build a fully styled, professional document — instantly.</p>
+      <div class="hero-badges">
+        <div class="hero-badge">📊 Excel</div>
+        <div class="hero-badge">📝 Word</div>
+        <div class="hero-badge">📕 PDF</div>
+        <div class="hero-badge">🎞️ PowerPoint</div>
+        <div class="hero-badge">30+ Templates</div>
+      </div>
+    </div>
+
+    <!-- MAIN TAB SWITCHER -->
+    <div class="main-tabs">
+      <button class="main-tab"   id="tabCascade"  onclick="switchMainTab('cascade')">⚡ Cascade Generate</button>
+      <button class="main-tab on" id="tabGenerate" onclick="switchMainTab('generate')">✦ Adhoc Generate</button>
+      <button class="main-tab"   id="tabAsk"      onclick="switchMainTab('ask')">🔍 Ask Library</button>
+    </div>
+
+    <!-- TAB: GENERATE (existing content wrapped) -->
+    <div class="tab-panel on" id="panelGenerate">
+
+    <!-- 01 OUTPUT TYPE -->
+    <div class="card output-card" id="outputTypeCard">
+      <div class="card-label">
+        <span class="step-n" id="sn-ot">01</span>
+        <span class="label-txt">Template</span>
+        <span class="badge badge-req">Required</span>
+      </div>
+      <select id="outputType" onchange="onOutputTypeChange()">
+        <option value="">— Select Template —</option>
+        <option>Project Plan</option><option>Communication Plan</option><option>Governance Matrix</option>
+        <option>Weekly Status Report</option><option>Steering Committee Status Report</option>
+        <option>Risk/Issue Log</option><option>Onboarding PPT</option><option>Milestone Signoff Format</option>
+        <option>RTM</option><option>To-Be Process</option><option>Fit-Gap</option>
+        <option>Solution Design</option><option>Interface List</option><option>Integration Strategy</option>
+        <option>Data Migration Strategy</option><option>Functional Spec Document</option>
+        <option>Data model (XML) → Workbook</option><option>Workbook → Data model (XML)</option><option>Data model CSF (XML) → Workbook</option><option>Workbook → Data model CSF (XML)</option><option>Config Specs</option><option>Integration TD</option>
+        <option>Unit Test Case</option><option>Test Strategy</option><option>Test Cases</option>
+        <option>Defect Log</option><option>Integration Test Case</option><option>UAT Test Case</option>
+        <option>Cutover Plan</option><option>Go-Live Checklist</option><option>Hypercare Tracker</option>
+        <option>Train the Trainer Plan</option><option>KT Plan</option>
+      </select>
+      <div class="saved-indicator" id="savedIndicator">
+        <div class="saved-dot"></div>
+        <span id="savedIndicatorText">System prompt saved for this Template</span>
+      </div>
+    </div>
+
+    <!-- 03 USER PROMPT -->
+    <div class="card user-card" id="userPromptCard" style="display:none">
+      <div class="card-label">
+        <span class="step-n" id="sn-up">03</span>
+        <span class="label-txt">User Prompt / Personalization</span>
+        <span class="badge badge-opt">Optional</span>
+      </div>
+      <textarea id="userPrompt" placeholder="Add your personal instructions or customizations...
+
+Examples:
+• Focus on the marketing team's Q3 budget
+• Add a risk rating column
+• Use company name 'Accenture' throughout
+• Highlight items due before June 2025"></textarea>
+    </div>
+
+    <!-- 04 INPUT FILE -->
+    <div class="card" id="inputFileCard" style="display:none">
+      <div class="card-label">
+        <span class="step-n" id="sn-if">04</span>
+        <span class="label-txt">Input File — Content &amp; Data</span>
+        <span class="badge badge-opt">Optional</span>
+      </div>
+      <div class="drop-zone" id="dz-input"
+           onclick="document.getElementById('fi-input').click()"
+           ondragover="onDragOver(event,'dz-input')" ondragleave="onDragLeave('dz-input')" ondrop="onDrop(event,'input')">
+        <span class="dz-icon" id="icon-input">📂</span>
+        <div class="dz-title" id="title-input">Drop your file here or click to browse</div>
+        <div class="dz-sub"   id="sub-input">Claude reads this as source content and data for generation</div>
+        <div class="type-chips">
+          <span class="chip doc">docx</span><span class="chip xl">xlsx</span><span class="chip xl">csv</span>
+          <span class="chip ppt">pptx</span><span class="chip pdf">pdf</span>
+          <span class="chip txt">txt</span><span class="chip txt">md</span><span class="chip dat">json</span>
+          <span class="chip dat">xml</span>
+        </div>
+      </div>
+      <input type="file" id="fi-input" accept=".xlsx,.xls,.csv,.txt,.md,.json,.docx,.doc,.pdf,.pptx,.ppt,.xml" onchange="handleFile(this.files[0],'input')" />
+      <div class="file-chip green" id="chip-input">
+        <span class="fc-ico" id="chipico-input">📄</span>
+        <div class="fc-info"><div class="fc-name" id="chipname-input">—</div><div class="fc-meta" id="chipmeta-input">—</div></div>
+        <button class="fc-rm" onclick="removeFile(event,'input')">✕</button>
+      </div>
+    </div>
+
+    <!-- 05 REFERENCE FILE — Style &amp; Structure -->
+    <!-- User Reference toggle + upload (user only) -->
+    <div class="card user-card" id="userRefCard" style="display:none">
+      <div class="card-label">
+        <span class="step-n" id="sn-rf-user">03</span>
+        <span class="label-txt">Reference File — Style &amp; Structure</span>
+        <span class="badge badge-opt">Optional</span>
+      </div>
+      <!-- Toggle switch -->
+      <label class="toggle-row" id="userRefToggleRow" for="userRefToggle">
+        <div class="toggle-switch">
+          <input type="checkbox" id="userRefToggle" onchange="onUserRefToggle()" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </div>
+        <div class="toggle-label-wrap">
+          <div class="toggle-label-main">Use my own Reference File</div>
+          <div class="toggle-label-sub">Override the system reference with your own file for style &amp; structure guidance</div>
+        </div>
+      </label>
+      <!-- User ref upload zone (shown when toggle ON) -->
+      <div class="user-ref-zone" id="userRefZone">
+        <div class="ref-info" style="margin-top:10px">
+          <span style="font-size:14px;flex-shrink:0">👤</span>
+          <span><strong>Your reference file takes priority.</strong> When uploaded, Claude will mirror <em>your</em> file's style — the system reference is ignored.</span>
+        </div>
+        <div class="drop-zone ref-zone" id="dz-user-ref"
+             onclick="document.getElementById('fi-user-ref').click()"
+             ondragover="onDragOver(event,'dz-user-ref')" ondragleave="onDragLeave('dz-user-ref')" ondrop="onDropSlot(event,'user-ref')">
+          <span class="dz-icon" id="icon-user-ref">📂</span>
+          <div class="dz-title" id="title-user-ref">Upload your reference file</div>
+          <div class="dz-sub"   id="sub-user-ref">Output will follow its structure, design and tone</div>
+          <div class="type-chips">
+            <span class="chip doc">docx</span><span class="chip xl">xlsx</span><span class="chip xl">csv</span>
+            <span class="chip ppt">pptx</span><span class="chip pdf">pdf</span>
+            <span class="chip txt">txt</span><span class="chip txt">md</span><span class="chip dat">json</span>
+          </div>
+        </div>
+        <input type="file" id="fi-user-ref" accept=".xlsx,.xls,.csv,.txt,.md,.json,.docx,.doc,.pdf,.pptx,.ppt,.xml" onchange="handleFileSlot(this.files[0],'user-ref')" />
+        <div class="file-chip purple" id="chip-user-ref">
+          <span class="fc-ico" id="chipico-user-ref">📄</span>
+          <div class="fc-info"><div class="fc-name" id="chipname-user-ref">—</div><div class="fc-meta" id="chipmeta-user-ref">—</div></div>
+          <button class="fc-rm" onclick="removeFileSlot(event,'user-ref')">✕</button>
+        </div>
+        <div class="mirror-grid" id="mirrorGrid" style="display:grid;margin-top:10px">
+          <label class="mirror-item"><input type="checkbox" id="mir-structure" checked> Structure</label>
+          <label class="mirror-item"><input type="checkbox" id="mir-tone"      checked> Tone &amp; voice</label>
+          <label class="mirror-item"><input type="checkbox" id="mir-style"     checked> Style &amp; design</label>
+          <label class="mirror-item"><input type="checkbox" id="mir-layout"    checked> Layout</label>
+          <label class="mirror-item"><input type="checkbox" id="mir-patterns"  checked> Patterns</label>
+          <label class="mirror-item"><input type="checkbox" id="mir-format"    checked> Formatting</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ASSISTANT PROMPT (auto-populated, read-only, shows on turn 2+) -->
+    <div class="card asst-card" id="asstPromptCard">
+      <div class="card-label">
+        <span class="step-n" style="background:var(--teal-bg);border-color:var(--teal-b);color:var(--teal)">✦</span>
+        <span class="label-txt" style="color:var(--teal)">Assistant Prompt — Conversation Memory</span>
+        <span class="badge" style="background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-b)">Auto</span>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.7;max-height:120px;overflow-y:auto;font-family:var(--mono);white-space:pre-wrap;opacity:.85" id="asstPromptPreview"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:6px">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--teal);display:inline-block;box-shadow:0 0 6px var(--teal)"></span>
+        Claude will use the above context from your previous turn — ensuring continuity and refinement awareness.
+      </div>
+    </div>
+
+    <!-- META-PROMPT ACTIVATION NOTIFICATION -->
+    <div class="meta-toast" id="metaToast">
+      <span class="meta-toast-icon">↺</span>
+      <div class="meta-toast-body">
+        <div class="meta-toast-title">
+          <span class="meta-live-dot"></span>
+          Meta-Prompting Active
+        </div>
+        <div class="meta-toast-desc" id="metaToastDesc">
+          Claude now has memory of your previous generation. The <strong>↺ Refine / Continue</strong> button will carry full context into the next generation — allowing Claude to extend, modify, or build upon what it already created.
+        </div>
+      </div>
+      <div class="meta-toast-turn" id="metaToastTurn">Turn 1 done</div>
+    </div>
+
+    <!-- CONVERSATION HISTORY -->
+    <div class="conv-panel" id="convPanel">
+      <div class="conv-header" onclick="toggleConvPanel()">
+        <span class="conv-header-lbl">// Conversation History</span>
+        <span class="conv-turn-count" id="convTurnCount">0 turns</span>
+        <button class="conv-clear-btn" onclick="clearHistory(event)" style="margin:0;padding:3px 10px;font-size:10px">✕ Clear</button>
+        <span class="conv-chevron" id="convChevron">▼</span>
+      </div>
+      <div class="conv-body" id="convBody">
+        <div id="convTurnList"></div>
+      </div>
+    </div>
+
+    <!-- 06 OUTPUT FILENAME -->
+    <div class="card" id="outputFilenameCard" style="display:none">
+      <div class="card-label">
+        <span class="step-n" id="sn-fn">06</span>
+        <span class="label-txt">Output Filename</span>
+      </div>
+      <input type="text" id="fileName" value="my-document" placeholder="Output filename (no extension)" />
+    </div>
+
+    <!-- 07 OUTPUT FORMAT -->
+    <div class="card" id="outputFormatCard" style="display:none">
+      <div class="card-label">
+        <span class="step-n" id="sn-fmt">07</span>
+        <span class="label-txt">Output Format</span>
+      </div>
+      <div class="fmt-grid">
+        <button class="fmt-btn on" data-fmt="xlsx" onclick="selFmt(this)">
+          <span class="fmt-ico">📊</span><span class="fmt-name">Excel</span><span class="fmt-desc">Spreadsheets &amp; data</span>
+        </button>
+        <button class="fmt-btn" data-fmt="docx" onclick="selFmt(this)">
+          <span class="fmt-ico">📝</span><span class="fmt-name">Word</span><span class="fmt-desc">Documents &amp; reports</span>
+        </button>
+        <button class="fmt-btn" data-fmt="pdf" onclick="selFmt(this)">
+          <span class="fmt-ico">📕</span><span class="fmt-name">PDF</span><span class="fmt-desc">Polished reports</span>
+        </button>
+        <button class="fmt-btn" data-fmt="pptx" onclick="selFmt(this)">
+          <span class="fmt-ico">🎞️</span><span class="fmt-name">PowerPoint</span><span class="fmt-desc">Slides &amp; decks</span>
+        </button>
+        <button class="fmt-btn" data-fmt="xml" onclick="selFmt(this)">
+          <span class="fmt-ico">🗂️</span><span class="fmt-name">XML</span><span class="fmt-desc">Data model export</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- DOCUMENT LIBRARY -->
+    <div class="library-panel" id="libraryPanel">
+      <div class="library-header" onclick="toggleLibrary()">
+        <span class="library-header-lbl">📚 Document Library</span>
+        <span class="library-count" id="libCount">0 files</span>
+        <button class="library-refresh" onclick="loadLibrary(event)" title="Refresh">↺</button>
+        <span class="library-chevron" id="libChevron">▼</span>
+      </div>
+      <div class="library-body" id="libraryBody">
+        <div class="lib-filters">
+          <input  class="lib-filter-inp" id="libSearch"
+                  placeholder="Filter by filename or template…"
+                  oninput="filterLibrary()" />
+          <select class="lib-format-sel" id="libFormat" onchange="filterLibrary()">
+            <option value="">All formats</option>
+            <option value="xlsx">Excel</option>
+            <option value="docx">Word</option>
+            <option value="pdf">PDF</option>
+            <option value="pptx">PowerPoint</option>
+            <option value="xml">XML</option>
+          </select>
+        </div>
+        <div id="libTableWrap">
+          <div class="lib-empty">No documents yet — generate your first file above.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gen-btn-row">
+      <button class="gen-btn" id="genBtn" onclick="generate(false)">
+        ✦ &nbsp;Generate with Claude Agent
+      </button>
+      <button class="refine-btn" id="refineBtn" onclick="generate(true)">
+        ↺ &nbsp;Refine / Continue
+      </button>
+    </div>
+
+    </div><!-- /panelGenerate -->
+
+    <!-- TAB: ASK LIBRARY -->
+    <div class="tab-panel" id="panelAsk">
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-label">
+          <span class="step-n">🔍</span>
+          <span class="label-txt">Ask the Document Library</span>
+          <span class="badge" style="background:#EEF0FF;color:#4f46e5;border-color:#C7D2FE">Agentic</span>
+        </div>
+
+        <div class="ask-wrap">
+          <!-- Example prompts -->
+          <div class="ask-examples" id="askExamples">
+            <button class="ask-example" onclick="setAskExample(this)">All documents for project ABCDXYZ</button>
+            <button class="ask-example" onclick="setAskExample(this)">Latest Excel file in the library</button>
+            <button class="ask-example" onclick="setAskExample(this)">Summarise the risk register I generated</button>
+            <button class="ask-example" onclick="setAskExample(this)">Show all XML files created this week</button>
+            <button class="ask-example" onclick="setAskExample(this)">Find documents about SAP job classifications</button>
+          </div>
+
+          <!-- Input -->
+          <div class="ask-input-row">
+            <textarea
+              class="ask-textarea"
+              id="askInput"
+              placeholder="Ask anything about your document library…&#10;e.g. 'Find all project plan documents' or 'Summarise the risk register I made yesterday'"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();askLibrary();}"
+            ></textarea>
+            <button class="ask-btn" id="askBtn" onclick="askLibrary()">Ask</button>
+          </div>
+
+          <!-- Results -->
+          <div class="ask-results empty" id="askResults">
+            Your answer will appear here — grounded only in your document library.
+          </div>
+
+          <!-- Document download links surfaced by agent -->
+          <div class="ask-doc-links" id="askDocLinks" style="display:none;"></div>
+
+          <!-- Meta info -->
+          <div class="ask-meta" id="askMeta"></div>
+        </div>
+      </div>
+    </div><!-- /panelAsk -->
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TAB: CASCADE GENERATE  (user login only)
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="panelCascade">
+
+      <!-- Mode selector -->
+      <div class="card user-card" style="margin-bottom:10px">
+        <div class="card-label">
+          <span class="step-n" style="background:var(--acc-bg);border-color:var(--acc-b);color:var(--acc-l)">01</span>
+          <span class="label-txt" style="color:var(--acc-l)">Generation Mode</span>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="casc-mode-btn on" id="cascModeNew"   onclick="setCascMode('new')">
+            <span style="font-size:16px">✦</span><span>New Generation</span>
+            <small style="display:block;font-size:10px;color:var(--muted);font-weight:400;margin-top:2px">Generate documents from scratch</small>
+          </button>
+          <button class="casc-mode-btn" id="cascModeDelta" onclick="setCascMode('delta')">
+            <span style="font-size:16px">⚡</span><span>Delta Update</span>
+            <small style="display:block;font-size:10px;color:var(--muted);font-weight:400;margin-top:2px">Update existing documents with a change</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- Input section: NEW mode -->
+      <div id="cascNewInputSection">
+        <div class="card user-card" style="margin-bottom:10px">
+          <div class="card-label">
+            <span class="step-n" style="background:var(--acc-bg);border-color:var(--acc-b);color:var(--acc-l)">02</span>
+            <span class="label-txt" style="color:var(--acc-l)">Upload Source Document</span>
+            <span class="badge badge-req">Required</span>
+          </div>
+          <div class="drop-zone" id="cascDropZone" onclick="document.getElementById('cascFileInput').click()"
+               ondragover="event.preventDefault();this.classList.add('drag')"
+               ondragleave="this.classList.remove('drag')"
+               ondrop="cascHandleDrop(event)">
+            <div class="drop-icon">📄</div>
+            <div class="drop-label">Drop SOW, Project Plan, or any input document</div>
+            <div class="drop-sub">DOCX · PDF · XLSX · TXT  —  max 10 MB</div>
+            <div class="drop-chosen" id="cascFileChosen"></div>
+          </div>
+          <input type="file" id="cascFileInput" accept=".docx,.doc,.pdf,.xlsx,.xls,.txt,.csv,.md"
+                 onchange="cascOnFileSelect(this)">
+          <div style="margin-top:8px;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px">
+            <span style="color:#B9822B">★</span>
+            <span>Best results with <strong style="color:var(--text2)">DOCX</strong> or <strong style="color:var(--text2)">TXT</strong>.
+            For PDF: ensure the file is <strong style="color:var(--text2)">text-based</strong> (not a scanned image).</span>
+          </div>
+        </div>
+
+        <!-- Document selection grid -->
+        <div class="card user-card" style="margin-bottom:10px">
+          <div class="card-label">
+            <span class="step-n" style="background:var(--acc-bg);border-color:var(--acc-b);color:var(--acc-l)">03</span>
+            <span class="label-txt" style="color:var(--acc-l)">Select Documents to Generate</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="casc-sel-btn" onclick="cascSelectAll()">Select All (32)</button>
+            <button class="casc-sel-btn" onclick="cascClearAll()">Clear All</button>
+            <button class="casc-sel-btn" onclick="cascSelectPhase('Initiate')">Initiate</button>
+            <button class="casc-sel-btn" onclick="cascSelectPhase('Confirm')">Confirm</button>
+            <button class="casc-sel-btn" onclick="cascSelectPhase('Design-Build')">Design-Build</button>
+            <button class="casc-sel-btn" onclick="cascSelectPhase('Integrate')">Integrate</button>
+            <button class="casc-sel-btn" onclick="cascSelectPhase('Deploy')">Deploy</button>
+          </div>
+          <div id="cascDocGrid"></div>
+        </div>
+
+        <button class="casc-launch-btn" id="cascLaunchBtn" onclick="cascLaunch()">
+          ⚡ Generate Selected Documents
+        </button>
+      </div>
+
+      <!-- Input section: DELTA mode -->
+      <div id="cascDeltaInputSection" style="display:none">
+        <div class="card user-card" style="margin-bottom:10px">
+          <div class="card-label">
+            <span class="step-n" style="background:var(--acc-bg);border-color:var(--acc-b);color:var(--acc-l)">02</span>
+            <span class="label-txt" style="color:var(--acc-l)">Select Document Being Updated</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px">Session</label>
+              <select id="deltaSessionSel" onchange="loadDeltaVersions()">
+                <option value="">— Select cascade session —</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px">Document</label>
+              <select id="deltaNodeSel" onchange="loadDeltaVersions()">
+                <option value="">— Select document —</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px">Compare Against Version</label>
+            <select id="deltaVersionSel">
+              <option value="1">v1 (latest)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card user-card" style="margin-bottom:10px">
+          <div class="card-label">
+            <span class="step-n" style="background:var(--acc-bg);border-color:var(--acc-b);color:var(--acc-l)">03</span>
+            <span class="label-txt" style="color:var(--acc-l)">How Are You Providing the Change?</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <button class="casc-mode-btn on" id="deltaTypePrompt"  onclick="setDeltaType('prompt')"  style="flex:1"><span>Describe the change</span></button>
+            <button class="casc-mode-btn"    id="deltaTypeDelta"   onclick="setDeltaType('delta_section')" style="flex:1"><span>Upload changed section</span></button>
+            <button class="casc-mode-btn"    id="deltaTypeFull"    onclick="setDeltaType('full_doc')"  style="flex:1"><span>Upload full updated doc</span></button>
+          </div>
+          <div id="deltaPromptArea">
+            <textarea id="deltaPromptText" rows="4" placeholder="e.g. Added a new field 'Contract Value' (Currency type) in Section 3 — Financial Details. Also updated the project end date to 31-Dec-2026..."></textarea>
+          </div>
+          <div id="deltaFileArea" style="display:none">
+            <div class="drop-zone" id="deltaDropZone" onclick="document.getElementById('deltaFileInput').click()"
+                 ondragover="event.preventDefault();this.classList.add('drag')"
+                 ondragleave="this.classList.remove('drag')"
+                 ondrop="deltaHandleDrop(event)">
+              <div class="drop-icon">📄</div>
+              <div class="drop-label">Drop updated document section or full file</div>
+              <div class="drop-chosen" id="deltaFileChosen"></div>
+            </div>
+            <input type="file" id="deltaFileInput" accept=".docx,.doc,.pdf,.xlsx,.xls,.txt"
+                   onchange="deltaOnFileSelect(this)">
+          </div>
+        </div>
+
+        <button class="casc-launch-btn" id="deltaAnalyseBtn" onclick="deltaAnalyse()">
+          🔍 Analyse Delta Impact
+        </button>
+      </div>
+
+      <!-- Delta scope panel (shown after analysis) -->
+      <div id="cascDeltaScopePanel" style="display:none">
+        <div class="card user-card" style="margin-bottom:10px">
+          <div class="card-label">
+            <span class="step-n" style="background:var(--acc-bg);border-color:var(--acc-b);color:var(--acc-l)">04</span>
+            <span class="label-txt" style="color:var(--acc-l)">Delta Identified — Select Documents to Update</span>
+          </div>
+          <div id="deltaSummaryBox" style="background:var(--surface2);border:1px solid var(--acc-b);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.6"></div>
+          <div id="deltaAffectedList"></div>
+          <div style="display:flex;gap:10px;margin-top:14px">
+            <button class="casc-launch-btn" id="deltaApplyBtn" onclick="deltaApply()" style="flex:1">
+              ⚡ Apply Delta to Selected
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── ANIMATED GRAPH + PREVIEW ─────────────────────────────── -->
+      <div id="cascActiveSection" style="display:none;margin-top:16px">
+
+        <!-- Wave progress bar -->
+        <div class="casc-progress-wrap">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span class="casc-progress-label" id="cascProgressLabel">Initialising cascade…</span>
+            <span style="font-size:11px;color:var(--muted)" id="cascProgressCount">0 / 0</span>
+          </div>
+          <div class="casc-progress-bar-bg">
+            <div class="casc-progress-bar" id="cascProgressBar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Graph canvas + preview side by side -->
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:12px;margin-top:14px">
+
+          <!-- Cytoscape graph -->
+          <div class="casc-graph-wrap">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:11px;font-weight:600;color:var(--acc-l);letter-spacing:1px;text-transform:uppercase">Document Cascade</span>
+              <div class="casc-legend">
+                <span class="casc-leg-item casc-leg-idle">Idle</span>
+                <span class="casc-leg-item casc-leg-gen">Generating</span>
+                <span class="casc-leg-item casc-leg-done">Complete</span>
+                <span class="casc-leg-item casc-leg-final">Finalised</span>
+              </div>
+            </div>
+            <div id="cascCy"></div>
+          </div>
+
+          <!-- Document preview panel -->
+          <div class="casc-preview-panel">
+            <div class="casc-preview-header">
+              <span id="cascPreviewTitle" style="font-size:13px;font-weight:600;color:var(--text)">—</span>
+              <span id="cascPreviewMeta" style="font-size:10px;color:var(--muted)"></span>
+            </div>
+            <div class="casc-preview-body" id="cascPreviewBody">
+              <span style="color:var(--muted2);font-size:12px">Document content will stream here as each file is generated...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── POST-GENERATION DOCUMENT LIBRARY ────────────────────── -->
+      <div id="cascLibSection" style="display:none;margin-top:16px">
+        <div class="card user-card">
+          <div class="card-label">
+            <span class="label-txt" style="color:var(--acc-l)">Generated Documents</span>
+            <button class="casc-sel-btn" style="margin-left:auto" onclick="cascDownloadAll()">Download All</button>
+            <button class="casc-sel-btn" onclick="cascTriggerDelta()" style="margin-left:6px">⚡ Trigger Delta</button>
+          </div>
+          <div id="cascDocLibTable"></div>
+
+          <!-- ── Download graph (neon click-to-download) ────────── -->
+          <div class="casc-dl-graph-wrap" id="cascDlGraphWrap" style="display:none">
+            <div class="casc-dl-graph-hdr">
+              <span class="casc-dl-graph-title">Document Chain — Click to Download</span>
+              <div class="casc-dl-legend">
+                <span class="casc-dl-leg-item casc-dl-leg-ready">Ready to download</span>
+                <span class="casc-dl-leg-item casc-dl-leg-done">Downloaded</span>
+                <span class="casc-dl-leg-item casc-dl-leg-skip">Not generated</span>
+              </div>
+            </div>
+            <div class="casc-dl-hint">Click any glowing node to download that document</div>
+            <div style="position:relative">
+              <div id="cascDlCy"></div>
+              <div id="cascTooltipDl" style="display:none;position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+                background:rgba(10,10,20,0.92);color:#e2e8f0;font-size:11px;font-weight:600;
+                padding:5px 12px;border-radius:20px;pointer-events:none;white-space:nowrap;
+                border:1px solid #A100FF55;box-shadow:0 0 12px #A100FF44;z-index:10"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /panelCascade -->
+
+    <!-- Progress -->
+    <div class="prog-card" id="progCard">
+      <div class="prog-lbl">// Agent Pipeline</div>
+      <div class="step" id="p1"><span class="step-pip"></span><span class="step-txt">Reading &amp; encoding files</span><span class="step-t" id="t1"></span></div>
+      <div class="step" id="p2"><span class="step-pip"></span><span class="step-txt">Sending to backend server</span><span class="step-t" id="t2"></span></div>
+      <div class="step" id="p3"><span class="step-pip"></span><span class="step-txt">Claude building content plan</span><span class="step-t" id="t3"></span></div>
+      <div class="step" id="p4"><span class="step-pip"></span><span class="step-txt">Running Python template engine</span><span class="step-t" id="t4"></span></div>
+      <div class="step" id="p5"><span class="step-pip"></span><span class="step-txt">File ready for download</span><span class="step-t" id="t5"></span></div>
+      <div class="err-box" id="errBox"></div>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card" id="resultCard">
+      <div class="result-top">
+        <div>
+          <div class="result-badge">File Ready</div>
+          <div class="result-name" id="rName">—</div>
+          <div class="result-meta" id="rMeta">—</div>
+        </div>
+        <button class="dl-btn" onclick="downloadFile()">↓ &nbsp;Download</button>
+      </div>
+      <div class="preview-lbl">Claude's Output Preview</div>
+      <div class="preview-txt" id="rPreview"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="page-footer">
+      <div class="footer-logos">
+        <div class="footer-acc">
+          Accenture
+        </div>
+        <span class="footer-sep">×</span>
+        <div class="footer-claude">
+          <div class="footer-claude-icon">✦</div>
+          Claude AI by Anthropic
+        </div>
+      </div>
+      <div class="footer-txt">
+        Enterprise Document Generation Platform &nbsp;·&nbsp;
+        Powered by <a href="https://console.anthropic.com" target="_blank">Anthropic Claude</a><br>
+        © ProjectZen. All rights reserved. &nbsp;·&nbsp; Confidential
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// All JS preserved exactly from v6/v7
+const AUTH_KEY   = 'claudeAgent_auth';
+const CONFIG_KEY = 'claudeAgent_configs';   // unified: { [outputType]: { prompt, refData, refName, refExt, refMime } }
+
+function getStore()  { try{const r=localStorage.getItem(AUTH_KEY);  if(r)return JSON.parse(r);}catch(_){} return{admin:{username:'Admin',password:'Admin'},users:{}}; }
+function saveStore(s){ localStorage.setItem(AUTH_KEY,  JSON.stringify(s)); }
+function getConfigs(){ try{const r=localStorage.getItem(CONFIG_KEY);if(r)return JSON.parse(r);}catch(_){} return{}; }
+function saveConfigs(c){ localStorage.setItem(CONFIG_KEY,JSON.stringify(c)); }
+// Legacy shim so nothing breaks
+function getPrompts(){ const c=getConfigs(); const p={}; for(const[k,v] of Object.entries(c)) p[k]=v.prompt||''; return p; }
+
+let session = { role:'user', username:'guest', name:'guest' };
+
+function initUserMode(){
+  document.getElementById('heroKicker').textContent = '👤 No-Login Access — ProjectZen';
+  document.getElementById('heroSub'   ).textContent = 'Select a Template, personalize your generation, and let Claude create your document.';
+
+  document.getElementById('userPromptCard'    ).style.display = 'block';
+  document.getElementById('inputFileCard'     ).style.display = 'block';
+  document.getElementById('userRefCard'       ).style.display = 'block';
+  document.getElementById('outputFilenameCard').style.display = 'block';
+  document.getElementById('outputFormatCard'  ).style.display = 'block';
+  document.getElementById('genBtn'            ).style.display = 'flex';
+  const genBtnRow = document.querySelector('.gen-btn-row');
+  if(genBtnRow) genBtnRow.style.display = 'flex';
+
+  const upEl  = document.getElementById('sn-up');  if(upEl)  upEl.textContent  = '02';
+  const ifEl  = document.getElementById('sn-if');  if(ifEl)  ifEl.textContent  = '03';
+  const rfEl  = document.getElementById('sn-rf-user'); if(rfEl) rfEl.textContent = '03';
+  const fnEl  = document.getElementById('sn-fn');  if(fnEl)  fnEl.textContent  = '04';
+  const fmtEl = document.getElementById('sn-fmt'); if(fmtEl) fmtEl.textContent = '05';
+
+  document.getElementById('outputType').value='';
+  document.getElementById('savedIndicator').className='saved-indicator';
+  const tog=document.getElementById('userRefToggle');
+  if(tog){ tog.checked=false; onUserRefToggle(); }
+  resetFileSlot('user-ref');
+  inputFile=null; refFile=null;
+  window._pulledSystemPrompt='';
+  window._pulledAdminRefData=null;
+
+  setTimeout(pingServer, 500);
+  setTimeout(loadLibrary, 800);
+  cascInit();
+}
+function onOutputTypeChange(){
+  const ot       = document.getElementById('outputType').value;
+  const configs  = getConfigs();                   // { [ot]: { prompt, refData, refName, refExt, refMime } }
+  const cfg      = configs[ot] || {};
+  const isAdmin  = session && session.role==='admin';
+  const si       = document.getElementById('savedIndicator');
+
+  // ── FIX: hasRef checks BOTH cfg.refId (backend) and cfg.refData (legacy localStorage) ──
+  const hasRef   = !!(cfg.refId || cfg.refData);
+  const hasSaved = !!(cfg.prompt || hasRef);
+  if(ot && hasSaved){
+    const parts=[];
+    if(cfg.prompt) parts.push('System Prompt');
+    if(hasRef)     parts.push('Reference File');
+    document.getElementById('savedIndicatorText').textContent=`✓ Saved for Template "${ot}": ${parts.join(' + ')}`;
+    si.className='saved-indicator show';
+  } else { si.className='saved-indicator'; }
+
+  if(isAdmin){
+    // Load saved system prompt
+    document.getElementById('systemPrompt').value = cfg.prompt||'';
+    document.getElementById('savePromptBtn').disabled = !ot;
+    const pb=document.getElementById('pulledBanner');
+    if(ot && cfg.prompt){ document.getElementById('pulledBannerText').textContent=`Loaded saved config for Template "${ot}". Edit and re-save.`; pb.className='pulled-banner show'; }
+    else { pb.className='pulled-banner'; }
+
+    // Restore saved ref file into the admin ref drop zone
+    const savedRow=document.getElementById('adminRefSavedRow');
+    resetFileSlot('admin-ref');
+    window._pendingAdminRefPromise = null;
+
+    // ── FIX: check cfg.refId (new backend storage) OR cfg.refData (legacy) ──
+    if(hasRef){
+      // Set the in-memory encoded ref so generate() can use it
+      if(cfg.refId){
+        // New: stored on backend disk
+        window._currentAdminRefEncoded = {
+          type:'refId', refId:cfg.refId,
+          name:cfg.refName||'reference', ext:cfg.refExt||'', mime:cfg.refMime||''
+        };
+      } else {
+        // Legacy: base64 still in localStorage
+        const savedType = cfg.refType || 'base64';
+        window._currentAdminRefEncoded = {
+          type:savedType, name:cfg.refName,
+          ext:cfg.refExt||'', mime:cfg.refMime||'application/octet-stream',
+          content:cfg.refData
+        };
+      }
+
+      // Show file as "attached" in the drop zone UI
+      const icon = FILE_ICONS[cfg.refExt]||'📄';
+      document.getElementById('dz-admin-ref'     ).classList.add('filled');
+      document.getElementById('icon-admin-ref'   ).textContent = icon;
+      document.getElementById('title-admin-ref'  ).textContent = 'Saved: ' + (cfg.refName||'reference file');
+      document.getElementById('sub-admin-ref'    ).textContent = 'Saved reference — upload a new file to replace';
+      document.getElementById('chipico-admin-ref').textContent = icon;
+      document.getElementById('chipname-admin-ref').textContent = cfg.refName||'Saved reference';
+      document.getElementById('chipmeta-admin-ref').textContent =
+        (cfg.refId ? 'Server · ' : 'Saved · ') +
+        (cfg.refExt||'').toUpperCase() + ' · system reference';
+      document.getElementById('chip-admin-ref'   ).className = 'file-chip purple show';
+      document.getElementById('adminRefSavedText').textContent =
+        `📎 Reference file loaded: "${cfg.refName||'file'}" — upload a new file to replace it.`;
+      savedRow.className='saved-config-row show';
+    } else {
+      savedRow.className='saved-config-row';
+      window._currentAdminRefEncoded = null;
+    }
+    document.getElementById('adminRefWarn').className='store-warn';
+
+  } else {
+    // User: pull saved system prompt silently
+    window._pulledSystemPrompt = cfg.prompt||'';
+    // Pull saved admin ref file silently
+    // refId: tell backend to load from disk; base64: send content directly
+    if(cfg.refId){
+      window._pulledAdminRefData = { type:'refId', refId:cfg.refId,
+        name:cfg.refName, ext:cfg.refExt||'', mime:cfg.refMime||'' };
+    } else if(cfg.refData){
+      window._pulledAdminRefData = { type:cfg.refType||'base64', name:cfg.refName,
+        ext:cfg.refExt||'', mime:cfg.refMime||'application/octet-stream', content:cfg.refData };
+    } else {
+      window._pulledAdminRefData = null;
+    }
+
+    const ub=document.getElementById('userOutputNote');
+    if(ub){
+      const noteParts=[];
+      if(cfg.prompt)  noteParts.push('system instructions');
+      if(cfg.refData) noteParts.push('reference file');
+      if(ot && noteParts.length){
+        ub.style.display='flex';
+        ub.querySelector('span:last-child').textContent=`Loaded ${noteParts.join(' + ')} for Template "${ot}".`;
+      } else { ub.style.display='none'; }
+    }
+  }
+
+  if(ot){
+    document.getElementById('fileName').value = ot.replace(/\s*→\s*/g,'_to_').replace(/\s+/g,'_').replace(/[()]/g,'').replace(/_+/g,'_');
+    // Auto-select format based on template
+    const xmlTemplates = ['Workbook → Data model (XML)', 'Data model (XML) → Workbook'];
+    const xlsxTemplates = ['Data model (XML) → Workbook'];
+    const xmlOutputTemplates  = ['Workbook → Data model (XML)', 'Workbook → Data model CSF (XML)'];
+    const xlsxOutputTemplates = ['Data model (XML) → Workbook', 'Data model CSF (XML) → Workbook'];
+    if(xmlOutputTemplates.includes(ot)){
+      // Force XML output format
+      document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('on'));
+      const xmlBtn = document.querySelector('.fmt-btn[data-fmt="xml"]');
+      if(xmlBtn){ xmlBtn.classList.add('on'); fmt='xml'; }
+      showToast('✦ XML output auto-selected for "' + ot + '"');
+    } else if(xlsxOutputTemplates.includes(ot)){
+      // Force XLSX output format
+      document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('on'));
+      const xlsxBtn = document.querySelector('.fmt-btn[data-fmt="xlsx"]');
+      if(xlsxBtn){ xlsxBtn.classList.add('on'); fmt='xlsx'; }
+      showToast('✦ Excel output auto-selected for "' + ot + '"');
+    }
+  }
+}
+
+let inputFile=null, refFile=null, lastResult=null, fmt='xlsx';
+let _grndStatus = [];   // cascade doc-grid grounding status
+// Per-slot encoded files
+window._currentAdminRefEncoded  = null;
+window._currentUserRefEncoded   = null;
+window._pulledAdminRefData      = null;
+window._pulledSystemPrompt      = '';
+window._pendingAdminRefPromise  = null;
+
+const FILE_ICONS={xlsx:'📊',xls:'📊',csv:'📊',docx:'📝',doc:'📝',pdf:'📕',pptx:'🎞️',ppt:'🎞️',txt:'📄',md:'📋',json:'🔷',xml:'🗂️'};
+const MIME_MAP={pdf:'application/pdf',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',doc:'application/msword',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',xls:'application/vnd.ms-excel',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',ppt:'application/vnd.ms-powerpoint'};
+
+function selFmt(btn){ document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); fmt=btn.dataset.fmt; }
+function onDragOver(e,id){ e.preventDefault(); document.getElementById(id).classList.add('drag'); }
+function onDragLeave(id){ document.getElementById(id).classList.remove('drag'); }
+function onDrop(e,slot){ e.preventDefault(); document.getElementById(slot==='input'?'dz-input':'dz-ref').classList.remove('drag'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0],slot); }
+
+// Slot-based drag handlers for admin-ref and user-ref zones
+function onDropSlot(e,slot){
+  e.preventDefault();
+  document.getElementById('dz-'+slot).classList.remove('drag');
+  if(e.dataTransfer.files[0]){
+    const p = handleFileSlot(e.dataTransfer.files[0], slot);
+    if(slot==='admin-ref') window._pendingAdminRefPromise = p;
+  }
+}
+
+// Handle file for a named slot — returns Promise so callers can await encoding
+function handleFileSlot(file, slot){
+  if(!file) return Promise.resolve(null);
+  const ext=file.name.split('.').pop().toLowerCase(), icon=FILE_ICONS[ext]||'📄', size=(file.size/1024).toFixed(1);
+
+  // Update UI immediately
+  document.getElementById('dz-'+slot).classList.add('filled');
+  document.getElementById('icon-'+slot).textContent=icon;
+  document.getElementById('title-'+slot).textContent='File attached — encoding…';
+  document.getElementById('sub-'+slot).textContent='Please wait…';
+  document.getElementById('chipico-'+slot).textContent=icon;
+  document.getElementById('chipname-'+slot).textContent=file.name;
+  document.getElementById('chip-'+slot).className='file-chip purple show';
+
+  // Return Promise so Save button can await encoding before persisting
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    const isText = ['txt','md','csv','json','html'].includes(ext);
+
+    reader.onload = e => {
+      let encoded;
+      if(isText){
+        encoded = {type:'text', name:file.name, ext, content:e.target.result};
+        document.getElementById('chipmeta-'+slot).textContent=`${size} KB · ${ext.toUpperCase()} · ${slot==='admin-ref'?'system reference':'your reference'}`;
+      } else {
+        const b64 = e.target.result.split(',')[1];
+        encoded = {type:'base64', name:file.name, ext, mime:MIME_MAP[ext]||'application/octet-stream', content:b64};
+        document.getElementById('chipmeta-'+slot).textContent=`${size} KB · ${ext.toUpperCase()} · ${slot==='admin-ref'?'system reference':'your reference'} (${(b64.length/1024).toFixed(0)}KB encoded)`;
+      }
+      document.getElementById('title-'+slot).textContent='File attached';
+      document.getElementById('sub-'+slot).textContent='Click to change';
+      if(slot==='admin-ref') window._currentAdminRefEncoded = encoded;
+      if(slot==='user-ref' ) window._currentUserRefEncoded  = encoded;
+      resolve(encoded);
+    };
+
+    reader.onerror = e => {
+      document.getElementById('title-'+slot).textContent='Error reading file';
+      reject(e);
+    };
+
+    if(isText) reader.readAsText(file);
+    else       reader.readAsDataURL(file);
+  });
+}
+
+function removeFileSlot(e, slot){
+  if(e) e.stopPropagation();
+  const dz=document.getElementById('dz-'+slot);
+  if(dz) dz.classList.remove('filled');
+  const iconDefaults={'admin-ref':'✦','user-ref':'📂'};
+  const titleDefaults={'admin-ref':'Attach system reference file','user-ref':'Upload your reference file'};
+  const subDefaults={'admin-ref':'Will be saved and applied automatically for users','user-ref':'Output will follow its structure, design and tone'};
+  if(document.getElementById('icon-'+slot))  document.getElementById('icon-'+slot).textContent=iconDefaults[slot]||'📂';
+  if(document.getElementById('title-'+slot)) document.getElementById('title-'+slot).textContent=titleDefaults[slot]||'Attach a file';
+  if(document.getElementById('sub-'+slot))   document.getElementById('sub-'+slot).textContent=subDefaults[slot]||'';
+  const chip=document.getElementById('chip-'+slot);
+  if(chip) chip.className='file-chip purple';
+  const fi=document.getElementById('fi-'+slot);
+  if(fi) fi.value='';
+  if(slot==='admin-ref') window._currentAdminRefEncoded=null;
+  if(slot==='user-ref' ) window._currentUserRefEncoded=null;
+}
+
+function resetFileSlot(slot){ removeFileSlot(null, slot); }
+
+// Toggle: show/hide user ref upload zone
+function onUserRefToggle(){
+  const checked=document.getElementById('userRefToggle').checked;
+  document.getElementById('userRefToggleRow').className='toggle-row'+(checked?' active':'');
+  const zone=document.getElementById('userRefZone');
+  zone.className='user-ref-zone'+(checked?' show':'');
+  if(!checked){
+    resetFileSlot('user-ref');
+    window._currentUserRefEncoded=null;
+  }
+}
+
+function handleFile(file,slot){
+  if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase(), icon=FILE_ICONS[ext]||'📄', size=(file.size/1024).toFixed(1);
+  if(slot==='input'){
+    inputFile=file;
+    document.getElementById('dz-input'      ).classList.add('filled');
+    document.getElementById('icon-input'    ).textContent=icon;
+    document.getElementById('title-input'   ).textContent='File attached successfully';
+    document.getElementById('sub-input'     ).textContent='Click to change file';
+    document.getElementById('chipico-input' ).textContent=icon;
+    document.getElementById('chipname-input').textContent=file.name;
+    document.getElementById('chipmeta-input').textContent=`${size} KB · ${ext.toUpperCase()} · content & data`;
+    document.getElementById('chip-input'    ).classList.add('show');
+  } else {
+    refFile=file;
+    document.getElementById('dz-ref'      ).classList.add('filled');
+    document.getElementById('icon-ref'    ).textContent=icon;
+    document.getElementById('title-ref'   ).textContent='Reference file attached';
+    document.getElementById('sub-ref'     ).textContent='Claude will mirror its style and structure';
+    document.getElementById('chipico-ref' ).textContent=icon;
+    document.getElementById('chipname-ref').textContent=file.name;
+    document.getElementById('chipmeta-ref').textContent=`${size} KB · ${ext.toUpperCase()} · style reference`;
+    document.getElementById('chip-ref'    ).classList.add('show');
+    document.getElementById('mirrorGrid'  ).style.display='grid';
+  }
+}
+
+function removeFile(e,slot){
+  e.stopPropagation();
+  if(slot==='input'){
+    inputFile=null; document.getElementById('fi-input').value='';
+    document.getElementById('dz-input'   ).classList.remove('filled');
+    document.getElementById('icon-input' ).textContent='📂';
+    document.getElementById('title-input').textContent='Drop your file here or click to browse';
+    document.getElementById('sub-input'  ).textContent='Claude reads this as source content and data for generation';
+    document.getElementById('chip-input' ).classList.remove('show');
+  } else {
+    refFile=null; document.getElementById('fi-ref').value='';
+    document.getElementById('dz-ref'    ).classList.remove('filled');
+    document.getElementById('icon-ref'  ).textContent='✦';
+    document.getElementById('title-ref' ).textContent='Attach a reference file';
+    document.getElementById('sub-ref'   ).textContent='Output will follow its structure, design and tone';
+    document.getElementById('chip-ref'  ).classList.remove('show');
+    document.getElementById('mirrorGrid').style.display='none';
+  }
+}
+
+function toBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
+function toText(file)  { return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.onerror=rej; r.readAsText(file); }); }
+
+async function encodeFile(file){
+  if(!file) return null;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(['txt','md','csv','json','html'].includes(ext)) return {type:'text',name:file.name,ext,content:await toText(file)};
+  return {type:'base64',name:file.name,ext,mime:MIME_MAP[ext]||'application/octet-stream',content:await toBase64(file)};
+}
+
+function getMirrorAspects(){
+  const ids=['structure','tone','style','layout','patterns','format'];
+  const labels={structure:'structure',tone:'tone & voice',style:'style & design',layout:'layout',patterns:'patterns',format:'formatting'};
+  return ids.filter(id=>document.getElementById('mir-'+id)?.checked).map(id=>labels[id]);
+}
+
+const srv=()=>document.getElementById('serverUrl').value.replace(/\/$/,'');
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+
+async function pingServer(){
+  const dot=document.getElementById('sdot'), lbl=document.getElementById('slabel');
+  dot.className='sdot checking'; lbl.textContent='Checking…';
+  try{ await fetch(`${srv()}/health`,{signal:AbortSignal.timeout(4000)}); dot.className='sdot on'; lbl.textContent='Online ✓'; }
+  catch{ dot.className='sdot off'; lbl.textContent='Offline'; }
+}
+
+function setStep(n,state,time){ const el=document.getElementById('p'+n); el.className='step '+state; if(time) document.getElementById('t'+n).textContent=time+'s'; }
+function showErr(msg){ const b=document.getElementById('errBox'); b.textContent='⚠ '+msg; b.className='err-box show'; }
+
+
+// ═══════════════════════════════════════════════════════════════
+// CONVERSATION MEMORY — Multi-turn meta-prompt state
+// ═══════════════════════════════════════════════════════════════
+
+// conversationHistory holds each completed turn:
+// { turnNum, userPrompt, assistantSummary, fileId, fileName, outputFormat,
+//   outputType, preview, timestamp }
+let conversationHistory = [];
+
+// Build the assistant prompt content from prior turns
+// This is what gets sent as the "assistant" role message
+function buildAssistantMemory() {
+  if (conversationHistory.length === 0) return null;
+
+  // Include up to last 3 turns to stay within token budget
+  const recentTurns = conversationHistory.slice(-3);
+
+  const blocks = recentTurns.map(t => {
+    return [
+      '[Turn ' + t.turnNum + ']',
+      'Template: ' + t.outputType,
+      'Instruction: ' + t.userPrompt.slice(0, 600),
+      'Generated: ' + t.fileName + ' (' + t.outputFormat.toUpperCase() + ')',
+      'Summary of output: ' + t.preview.slice(0, 800),
+    ].join('\n');
+  });
+
+  return [
+    '=== CONVERSATION HISTORY (previous turns) ===',
+    blocks.join('\n\n---\n\n'),
+    '=== END HISTORY ===',
+    '',
+    'You are continuing a multi-turn document generation session.',
+    'Build upon, refine, or extend the previous output as directed by the new instructions.',
+    'Maintain consistency with prior decisions (naming, structure, style) unless explicitly asked to change them.',
+  ].join('\n');
+}
+
+// Update the assistant prompt preview card in UI
+function updateAsstPromptUI() {
+  const memory    = buildAssistantMemory();
+  const card      = document.getElementById('asstPromptCard');
+  const preview   = document.getElementById('asstPromptPreview');
+  const refineBtn = document.getElementById('refineBtn');
+  const metaToast = document.getElementById('metaToast');
+  const metaDesc  = document.getElementById('metaToastDesc');
+  const metaTurn  = document.getElementById('metaToastTurn');
+
+  if (memory && conversationHistory.length > 0) {
+    const n = conversationHistory.length;
+
+    // Show assistant prompt card
+    card.className      = 'card asst-card show';
+    preview.textContent = memory;
+
+    // Show refine button
+    refineBtn.className = 'refine-btn show';
+
+    // Show meta-prompt activation notification with contextual message
+    if (metaToast) {
+      metaToast.className = 'meta-toast show';
+      if (metaTurn) metaTurn.textContent = 'Turn ' + n + ' done';
+      if (metaDesc) {
+        if (n === 1) {
+          metaDesc.innerHTML = 'Claude now has memory of your first generation. Click <strong>↺ Refine / Continue</strong> to extend, modify or add to your document — Claude will build upon what it already created.';
+        } else {
+          metaDesc.innerHTML = '<strong>' + n + ' turns completed.</strong> Claude is carrying full conversation memory. Each refinement builds cumulatively — your document grows smarter with every turn.';
+        }
+      }
+    }
+  } else {
+    card.className      = 'card asst-card';
+    preview.textContent = '';
+    refineBtn.className = 'refine-btn';
+    if (metaToast) metaToast.className = 'meta-toast';
+  }
+}
+
+// Add a completed turn to conversation history
+function addTurnToHistory(turnData) {
+  const turn = {
+    turnNum:      conversationHistory.length + 1,
+    userPrompt:   turnData.userPrompt,
+    outputType:   turnData.outputType,
+    fileName:     turnData.fileName,
+    fileId:       turnData.fileId,
+    outputFormat: turnData.outputFormat,
+    preview:      turnData.preview || '',
+    timestamp:    new Date().toLocaleTimeString(),
+  };
+  conversationHistory.push(turn);
+  renderConvPanel();
+  updateAsstPromptUI();
+}
+
+// Render the conversation history panel
+function renderConvPanel() {
+  const panel     = document.getElementById('convPanel');
+  const list      = document.getElementById('convTurnList');
+  const turnCount = document.getElementById('convTurnCount');
+  const badgeClasses = ['t1','t2','t3'];
+
+  if (conversationHistory.length === 0) {
+    panel.className = 'conv-panel';
+    return;
+  }
+
+  panel.className = 'conv-panel show';
+  turnCount.textContent = `${conversationHistory.length} turn${conversationHistory.length > 1 ? 's' : ''}`;
+
+  list.innerHTML = conversationHistory.map((t, i) => {
+    const bClass = badgeClasses[i % 3];
+    return `
+      <div class="conv-turn">
+        <div class="turn-badge ${bClass}">T${t.turnNum}</div>
+        <div class="turn-content">
+          <div class="turn-label">${t.outputType} · ${t.timestamp}</div>
+          <div class="turn-summary">${t.userPrompt.slice(0,120)}${t.userPrompt.length>120?'…':''}</div>
+          <div class="turn-file" onclick="reDownload('${t.fileId}','${t.fileName}')">
+            ↓ ${t.fileName}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Toggle conversation panel open/closed
+function toggleConvPanel() {
+  const body    = document.getElementById('convBody');
+  const chevron = document.getElementById('convChevron');
+  const isOpen  = body.classList.contains('open');
+  body.className    = isOpen ? 'conv-body' : 'conv-body open';
+  chevron.className = isOpen ? 'conv-chevron' : 'conv-chevron open';
+}
+
+// Re-download a file from a previous turn
+function reDownload(fileId, fileName) {
+  const a = document.createElement('a');
+  a.href     = `${srv()}/download/${fileId}?name=${encodeURIComponent(fileName)}`;
+  a.download = fileName;
+  a.click();
+}
+
+// Clear conversation history (start fresh)
+function clearHistory(e) {
+  if(e) e.stopPropagation();
+  if (conversationHistory.length === 0) return;
+  if (!confirm(`Clear all ${conversationHistory.length} turn(s) of conversation history? This starts a fresh session.`)) return;
+  conversationHistory = [];
+  renderConvPanel();
+  updateAsstPromptUI();
+  document.getElementById('asstPromptCard').className = 'card asst-card';
+  document.getElementById('convPanel').className = 'conv-panel';
+  const mt = document.getElementById('metaToast');
+  if(mt) mt.className = 'meta-toast';
+  showToast('✓ Conversation history cleared — starting fresh');
+}
+
+
+// ════════════════════════════════════════════════════════════════
+// DOCUMENT LIBRARY — Step 2 (SQLite persistent storage)
+// ════════════════════════════════════════════════════════════════
+
+let _allDocs = [];   // cached full list for client-side filtering
+
+async function loadLibrary(e) {
+  if(e) e.stopPropagation();
+  if(!session) return;
+  try {
+    const res  = await fetch(`${srv()}/documents?username=${encodeURIComponent(session.username)}&limit=200`);
+    const data = await res.json();
+    _allDocs   = data.documents || [];
+    renderLibraryTable(_allDocs);
+    updateLibCount(_allDocs.length);
+  } catch(err) {
+    console.warn("Library load failed:", err.message);
+  }
+}
+
+function updateLibCount(n) {
+  document.getElementById('libCount').textContent = `${n} file${n!==1?'s':''}`;
+  if(n > 0) document.getElementById('libraryPanel').className = 'library-panel show';
+}
+
+function toggleLibrary() {
+  const body    = document.getElementById('libraryBody');
+  const chevron = document.getElementById('libChevron');
+  const open    = body.classList.contains('open');
+  body.className    = open ? 'library-body'      : 'library-body open';
+  chevron.className = open ? 'library-chevron'   : 'library-chevron open';
+  if(!open && _allDocs.length === 0) loadLibrary(null);
+}
+
+function filterLibrary() {
+  const q   = (document.getElementById('libSearch').value  || "").toLowerCase();
+  const fmt = (document.getElementById('libFormat').value  || "");
+  const filtered = _allDocs.filter(d => {
+    const matchQ   = !q   || d.file_name.toLowerCase().includes(q) || (d.template||"").toLowerCase().includes(q);
+    const matchFmt = !fmt || d.output_format === fmt;
+    return matchQ && matchFmt;
+  });
+  renderLibraryTable(filtered);
+}
+
+function renderLibraryTable(docs) {
+  const wrap = document.getElementById('libTableWrap');
+  if(!docs || docs.length === 0) {
+    wrap.innerHTML = '<div class="lib-empty">No documents match your filter.</div>';
+    return;
+  }
+  const fmtChip = f => {
+    const cls = { xlsx:'lib-fmt-xlsx', docx:'lib-fmt-docx',
+                  pdf:'lib-fmt-pdf',  pptx:'lib-fmt-pptx', xml:'lib-fmt-xml' }[f] || '';
+    return `<span class="lib-fmt-chip ${cls}">${f.toUpperCase()}</span>`;
+  };
+  const rows = docs.map(d => {
+    const dt = new Date(d.created_at).toLocaleString();
+    return `<tr>
+      <td>
+        <div class="lib-fname" title="${d.file_name}">${d.file_name}</div>
+        <div class="lib-template">${d.template||''}</div>
+      </td>
+      <td>${fmtChip(d.output_format)}</td>
+      <td style="white-space:nowrap;font-size:10px;color:var(--muted)">${dt}</td>
+      <td style="text-align:right;white-space:nowrap">${d.size_kb} KB</td>
+      <td>
+        <button class="lib-dl-btn"
+          onclick="libDownload('${d.id}','${d.file_name.replace(/'/g,"\\'")}')">
+          ↓ Download
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table class="lib-table">
+    <thead><tr>
+      <th>File</th><th>Format</th><th>Created</th><th>Size</th><th></th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function libDownload(fileId, fileName) {
+  const a = document.createElement('a');
+  a.href     = `${srv()}/download/${encodeURIComponent(fileId)}?name=${encodeURIComponent(fileName)}`;
+  a.download = fileName;
+  a.click();
+}
+
+async function generate(isRefinement=false){
+  const isAdmin=session && session.role==='admin';
+  const outputType=document.getElementById('outputType').value.trim();
+  const userPrmt  =document.getElementById('userPrompt').value.trim();
+  const fileName  =document.getElementById('fileName').value.trim()||'output';
+
+  document.getElementById('errBox'    ).className='err-box';
+  document.getElementById('resultCard').className='result-card';
+
+  if(!outputType){ document.getElementById('progCard').className='prog-card show'; showErr('Please select a Template from the dropdown before generating.'); return; }
+
+  let systemPrmt='';
+  if(isAdmin){
+    systemPrmt=document.getElementById('systemPrompt').value.trim();
+    if(!systemPrmt){ document.getElementById('progCard').className='prog-card show'; showErr('System Prompt is required for Admin. Please enter or load a system prompt.'); return; }
+  } else {
+    systemPrmt=window._pulledSystemPrompt||getPrompts()[outputType]||'';
+  }
+
+  let mergedPrompt=`Template: ${outputType}\n\n`;
+  if(systemPrmt) mergedPrompt+=`System Instructions:\n${systemPrmt}`;
+  if(userPrmt)   mergedPrompt+=systemPrmt?`\n\nAdditional user instructions:\n${userPrmt}`:`User Instructions:\n${userPrmt}`;
+
+  // User must provide at least one of: User Prompt OR Input File
+  if(!isAdmin){
+    const hasPrompt = !!userPrmt;
+    const hasFile   = !!inputFile;
+    if(!hasPrompt && !hasFile){
+      document.getElementById('progCard').className='prog-card show';
+      showErr('Please provide either a User Prompt / Personalization or an Input File — at least one is required.');
+      return;
+    }
+  }
+
+  const btn      = document.getElementById('genBtn');
+  const refineBtn2 = document.getElementById('refineBtn');
+  btn.disabled = true;
+  if(refineBtn2) refineBtn2.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> &nbsp;Claude is generating…';
+  document.getElementById('progCard').className='prog-card show';
+  [1,2,3,4,5].forEach(n=>setStep(n,''));
+
+  try{
+    setStep(1,'active');
+    const t1=Date.now();
+    // Resolve input file
+    const fileData = await encodeFile(inputFile);
+
+    // Ref file priority: user ref > admin ref (saved or session)
+    let refData = null;
+    const userRefEncoded = window._currentUserRefEncoded;   // set if user uploaded
+    const adminRefEncoded = window._pulledAdminRefData      // loaded from saved config
+                         || window._currentAdminRefEncoded; // or uploaded this session (admin)
+
+    if(userRefEncoded){
+      refData = userRefEncoded;   // user's file wins
+    } else if(adminRefEncoded){
+      refData = adminRefEncoded;  // fall back to admin's saved ref
+    }
+
+    const mirrorAspects = refData ? getMirrorAspects() : [];
+    setStep(1,'done',((Date.now()-t1)/1000).toFixed(1));
+
+    // Step 2: send request — stays active while Claude streams (can take 2-5 min)
+    setStep(2,'active');
+    const t2=Date.now();
+
+    // Step 3 activates immediately — Claude is now building the content plan
+    // We use a timed pulse to show progress while waiting for the long response
+    const progressTimer = setInterval(() => {
+      const elapsed = ((Date.now()-t2)/1000).toFixed(0);
+      const stepEl = document.getElementById('p3');
+      if (stepEl && stepEl.classList.contains('active')) {
+        document.getElementById('t3').textContent = elapsed + 's';
+      }
+    }, 1000);
+
+    setStep(3,'active');
+
+    let res;
+    try {
+      // Build assistant memory for multi-turn chaining
+      const assistantMemory = buildAssistantMemory();
+
+      // Update step label based on whether this is a refinement
+      const step3El = document.querySelector('#p3 .step-txt');
+      if(step3El) step3El.textContent =
+        isRefinement
+          ? 'Claude refining — using conversation memory (Turn ' + (conversationHistory.length + 1) + ')'
+          : 'Claude building content plan';
+
+      res = await fetch(`${srv()}/generate`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          userPrompt:      mergedPrompt,
+          outputFormat:    fmt,
+          fileName,
+          fileData,
+          refData,
+          mirrorAspects,
+          assistantMemory: assistantMemory || null,  // null on turn 1
+          isRefinement,
+          username:        session ? session.username : 'unknown',
+        }),
+      });
+    } finally {
+      clearInterval(progressTimer);
+    }
+
+    // Claude streaming complete — backend received full response
+    setStep(2,'done',((Date.now()-t2)/1000).toFixed(1));
+    setStep(3,'done',((Date.now()-t2)/1000).toFixed(1));
+
+    if(!res.ok){
+      const err=await res.json().catch(()=>({error:`Server error ${res.status}`}));
+      throw new Error(err.error||`Server error ${res.status}`);
+    }
+
+    // Step 4: Python template running
+    setStep(4,'active');
+    const t4=Date.now();
+    const data=await res.json(); lastResult=data;
+    setStep(4,'done',((Date.now()-t4)/1000).toFixed(1));
+
+    // Step 5: done
+    setStep(5,'done','—');
+
+    const parts=[`Template: ${outputType}`,'Claude AI'];
+    if(inputFile) parts.push(`Data: "${inputFile.name}"`);
+    if(refFile)   parts.push(`Ref: "${refFile.name}"`);
+
+    document.getElementById('rName'   ).textContent=data.fileName;
+    document.getElementById('rMeta'   ).textContent=parts.join(' · ');
+    document.getElementById('rPreview').textContent=data.preview||'(No preview available)';
+    document.getElementById('resultCard').className='result-card show';
+
+    // Refresh document library to show the new file
+    loadLibrary(null);
+
+    // Add this turn to conversation history
+    addTurnToHistory({
+      userPrompt:   mergedPrompt,
+      outputType:   outputType,
+      fileName:     data.fileName,
+      fileId:       data.fileId,
+      outputFormat: fmt,
+      preview:      data.preview || '',
+    });
+
+  } catch(err){ showErr(err.message); }
+  btn.disabled = false;
+  if(refineBtn2) refineBtn2.disabled = false;
+  btn.innerHTML = '✦ &nbsp;Generate with Claude Agent';
+}
+
+function downloadFile(){
+  if(!lastResult) return;
+  const {fileId,fileName}=lastResult;
+  const a=document.createElement('a');
+  a.href=`${srv()}/download/${fileId}?name=${encodeURIComponent(fileName)}`;
+  a.download=fileName; a.click();
+}
+
+let toastTimer;
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.borderColor=type==='error'?'var(--red-b)':'var(--green-b)';
+  t.style.color=type==='error'?'var(--red)':'var(--green)';
+  t.className='toast show'; clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.className='toast',3200);
+}
+
+window._pulledSystemPrompt='';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CASCADE GENERATE — CSS injected inline (keeps existing file intact)
+// ═══════════════════════════════════════════════════════════════════════════
+(function injectCascadeStyles(){
+  const s = document.createElement('style');
+  s.textContent = `
+/* ── Cascade mode buttons ────────────────────────────── */
+.casc-mode-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  gap:4px; padding:12px 10px; border-radius:10px;
+  border:1px solid var(--border2); background:var(--surface2);
+  font-family:var(--sans); font-size:13px; font-weight:600;
+  color:var(--text2); cursor:pointer; transition:all .2s;
+}
+.casc-mode-btn:hover { border-color:var(--acc-b); color:var(--acc-l); }
+.casc-mode-btn.on {
+  border-color:var(--acc); background:var(--acc-bg);
+  color:var(--acc-l); box-shadow:0 0 0 1px var(--acc-b);
+}
+/* ── Selection buttons ───────────────────────────────── */
+.casc-sel-btn {
+  padding:5px 12px; border-radius:7px; border:1px solid var(--border2);
+  background:var(--surface2); font-size:11px; font-weight:500;
+  color:var(--muted); cursor:pointer; transition:all .15s;
+}
+.casc-sel-btn:hover { border-color:var(--acc-b); color:var(--acc-l); }
+/* ── Drop zone ────────────────────────────────────────── */
+.drop-zone {
+  border:1.5px dashed var(--border3); border-radius:12px;
+  padding:24px 20px; text-align:center; cursor:pointer;
+  transition:all .2s; background:var(--surface2);
+}
+.drop-zone:hover,.drop-zone.drag {
+  border-color:var(--acc); background:var(--acc-bg);
+}
+.drop-icon { font-size:28px; margin-bottom:6px; }
+.drop-label { font-size:13px; font-weight:600; color:var(--text2); }
+.drop-sub   { font-size:11px; color:var(--muted); margin-top:3px; }
+.drop-chosen{ font-size:11px; color:var(--acc-l); margin-top:6px; font-weight:600; }
+/* ── Document grid (phase groups) ────────────────────── */
+.casc-phase-group { margin-bottom:10px; }
+.casc-phase-hdr {
+  font-size:10px; font-weight:700; letter-spacing:1.5px;
+  text-transform:uppercase; color:var(--muted); margin-bottom:6px;
+  padding:4px 0; border-bottom:1px solid var(--border2);
+}
+.casc-doc-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:5px;
+}
+.casc-doc-chip {
+  display:flex; align-items:center; gap:8px; padding:7px 10px;
+  border-radius:8px; border:1px solid var(--border2);
+  background:var(--surface2); cursor:pointer; transition:all .15s;
+  font-size:12px; color:var(--text2);
+}
+.casc-doc-chip:hover { border-color:var(--border3); }
+.casc-doc-chip.sel {
+  border-color:var(--acc-b); background:var(--acc-bg); color:var(--acc-l);
+}
+.casc-doc-chip input[type=checkbox] { accent-color:var(--acc); }
+/* ── Grayed chip (non-grounded or out-of-chain) ───────── */
+.casc-doc-chip.grayed {
+  opacity:0.35; cursor:not-allowed; pointer-events:none;
+  border-color:var(--border2); background:var(--surface); color:var(--muted2);
+}
+.casc-chip-badge {
+  font-size:9px; font-weight:700; letter-spacing:.4px; text-transform:uppercase;
+  color:var(--muted2); padding:1px 5px; border-radius:4px; flex-shrink:0;
+  border:1px solid var(--border2); background:var(--surface);
+}
+/* ── Root document chain picker ──────────────────────── */
+.casc-root-picker {
+  background:var(--surface2); border:1px solid var(--acc-b);
+  border-radius:10px; padding:11px 14px; margin-bottom:14px;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.casc-root-picker-label {
+  font-size:10px; font-weight:700; color:var(--acc-l);
+  letter-spacing:1px; text-transform:uppercase; white-space:nowrap;
+}
+.casc-root-picker select {
+  flex:1; min-width:200px; background:var(--surface); border:1px solid var(--border3);
+  border-radius:7px; padding:7px 10px; font-size:12px; color:var(--text);
+  font-family:var(--sans); outline:none;
+}
+.casc-root-picker select:focus { border-color:var(--acc-b); }
+.casc-root-hint {
+  font-size:10px; color:var(--muted); white-space:nowrap;
+  padding:4px 9px; border-radius:20px; background:var(--surface);
+  border:1px solid var(--border2);
+}
+/* ── Post-gen download graph ──────────────────────────── */
+.casc-dl-graph-wrap {
+  margin-top:16px; border:1px solid var(--border2); border-radius:12px;
+  overflow:hidden; background:var(--surface);
+  box-shadow: var(--shadow);
+}
+.casc-dl-graph-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 16px; border-bottom:1px solid var(--border2);
+  background:var(--surface2);
+}
+.casc-dl-graph-title {
+  font-size:11px; font-weight:700; color:var(--acc-l);
+  letter-spacing:1px; text-transform:uppercase;
+}
+.casc-dl-legend {
+  display:flex; align-items:center; gap:12px;
+}
+.casc-dl-leg-item {
+  font-size:10px; color:var(--muted); display:flex; align-items:center; gap:5px;
+}
+.casc-dl-leg-item::before {
+  content:''; width:10px; height:10px; border-radius:3px; display:inline-block;
+}
+.casc-dl-leg-ready::before  { background:#A100FF; box-shadow:0 0 6px #A100FFAA; }
+.casc-dl-leg-done::before   { background:#FFB800; }
+.casc-dl-leg-skip::before   { background:#4a4a6a; opacity:.5; }
+.casc-dl-hint {
+  font-size:11px; color:var(--muted); padding:8px 16px;
+  background:var(--surface2); text-align:center; border-bottom:1px solid var(--border2);
+}
+#cascDlCy { width:100%; height:440px; }
+@keyframes casc-neon-dl {
+  0%,100% { opacity:1; }
+  50%      { opacity:0.6; }
+}
+.tier-dot {
+  width:8px; height:8px; border-radius:50%; flex-shrink:0;
+}
+.t1 { background:#ef4444; }
+.t2 { background:#f59e0b; }
+.t3 { background:#3b82f6; }
+.t4 { background:#22c55e; }
+/* ── Launch button ────────────────────────────────────── */
+.casc-launch-btn {
+  width:100%; padding:15px; border:none; border-radius:12px;
+  background:linear-gradient(135deg,var(--acc),var(--acc-d));
+  font-family:var(--sans); font-size:14px; font-weight:700;
+  color:#fff; cursor:pointer; transition:all .25s;
+  box-shadow:0 4px 20px var(--acc-glow); margin-top:6px;
+}
+.casc-launch-btn:hover { transform:translateY(-2px); box-shadow:0 8px 32px var(--acc-glow); }
+.casc-launch-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+/* ── Wave progress bar ────────────────────────────────── */
+.casc-progress-wrap {
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:12px; padding:14px 16px;
+  box-shadow: var(--shadow);
+}
+.casc-progress-label { font-size:12px; font-weight:600; color:var(--acc-l); }
+.casc-progress-bar-bg {
+  background:var(--surface2); border-radius:100px; height:5px; overflow:hidden;
+}
+.casc-progress-bar {
+  height:100%; border-radius:100px;
+  background:linear-gradient(90deg,var(--acc),var(--acc-l));
+  transition:width .5s ease; box-shadow:0 0 8px var(--acc-glow);
+}
+/* ── Cytoscape graph wrapper ──────────────────────────── */
+.casc-graph-wrap {
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:12px; padding:12px; position:relative;
+  box-shadow: var(--shadow);
+}
+#cascCy { width:100%; height:400px; }
+/* ── Node state animations (applied via Cytoscape classes) */
+@keyframes casc-sweep {
+  0%   { background-position:-200% 0; }
+  100% { background-position:200% 0; }
+}
+/* ── Legend ────────────────────────────────────────────── */
+.casc-legend { display:flex; gap:8px; flex-wrap:wrap; }
+.casc-leg-item {
+  font-size:10px; font-weight:600; padding:2px 8px;
+  border-radius:10px; letter-spacing:.5px;
+}
+.casc-leg-idle  { background:var(--surface2); border:1px solid var(--border2); color:var(--muted); }
+.casc-leg-gen   { background:var(--acc-bg); border:1px solid var(--acc-b); color:var(--acc-l); }
+.casc-leg-done  { background:rgba(47,143,91,.08); border:1px solid var(--green-b); color:var(--green); }
+.casc-leg-final { background:var(--gold-bg); border:1px solid var(--gold-b); color:var(--gold); }
+/* ── Preview panel ────────────────────────────────────── */
+.casc-preview-panel {
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:12px; display:flex; flex-direction:column; overflow:hidden;
+  box-shadow: var(--shadow);
+}
+.casc-preview-header {
+  padding:10px 14px; border-bottom:1px solid var(--border2);
+  display:flex; flex-direction:column; gap:2px; flex-shrink:0;
+  background:var(--surface2);
+}
+.casc-preview-body {
+  flex:1; overflow-y:auto; padding:12px 14px;
+  font-family:var(--mono); font-size:10px;
+  line-height:1.8; color:var(--text2); white-space:pre-wrap;
+  max-height:380px;
+}
+/* ── Cascade document library table ─────────────────── */
+.casc-lib-table { width:100%; border-collapse:collapse; font-size:12px; }
+.casc-lib-table th {
+  text-align:left; padding:7px 10px; color:var(--muted);
+  font-size:10px; font-weight:700; letter-spacing:1px;
+  text-transform:uppercase; border-bottom:1px solid var(--border2);
+}
+.casc-lib-table td { padding:8px 10px; border-bottom:1px solid var(--border2); }
+.casc-lib-table tr:last-child td { border-bottom:none; }
+.casc-lib-table tr:hover td { background:var(--surface2); }
+.casc-final-badge {
+  font-size:9px; font-weight:700; padding:2px 7px; border-radius:5px;
+  background:var(--gold-bg); color:var(--gold); border:1px solid var(--gold-b);
+}
+.casc-draft-badge {
+  font-size:9px; font-weight:700; padding:2px 7px; border-radius:5px;
+  background:var(--surface2); color:var(--muted); border:1px solid var(--border2);
+}
+/* ── Delta affected list ─────────────────────────────── */
+.delta-aff-row {
+  display:flex; align-items:center; gap:10px; padding:8px 10px;
+  border-radius:8px; border:1px solid var(--border2); margin-bottom:5px;
+  background:var(--surface2); font-size:12px;
+}
+.delta-aff-row.is-final { border-color:var(--gold-b); background:var(--gold-bg); }
+.delta-aff-row input[type=checkbox] { accent-color:var(--acc); }
+.delta-final-choices {
+  display:flex; gap:8px; margin-left:auto; font-size:11px;
+}
+.delta-final-choices label { display:flex; align-items:center; gap:4px; cursor:pointer; }
+`;
+  document.head.appendChild(s);
+})();
+
+// Load Cytoscape + dagre from CDN dynamically
+(function loadCytoscapeCDN(){
+  function addScript(src, cb){
+    const el = document.createElement('script');
+    el.src = src; el.onload = cb || null;
+    document.head.appendChild(el);
+  }
+  addScript('https://unpkg.com/cytoscape@3.29.2/dist/cytoscape.min.js', () => {
+    addScript('https://unpkg.com/dagre@0.8.5/dist/dagre.min.js', () => {
+      addScript('https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js', () => {
+        if(typeof cytoscape !== 'undefined' && typeof cytoscapeDagre !== 'undefined'){
+          cytoscape.use(cytoscapeDagre);
+          console.log('Cytoscape + dagre ready');
+          window._cascCyReady = true;
+          if(window._cascPendingInit) window._cascPendingInit();
+        }
+      });
+    });
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CASCADE STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let _cascMode        = 'new';
+let _cascInputFile   = null;
+let _deltaInputFile  = null;
+let _deltaType       = 'prompt';
+let _cascSessionId   = null;
+let _cascGraphData   = null;
+let _cascCyInstance  = null;
+let _cascNodeStates  = {};    // node_id -> 'idle'|'queued'|'generating'|'complete'|'error'|'finalised'
+let _cascDocs        = {};    // node_id -> {file_id, version, is_finalised, ...}
+let _cascTotalDocs   = 0;
+let _cascDoneCount   = 0;
+let _deltaAnalysisResult = null;
+let _deltaSourceSessionId = null;
+let _cascRootNodeId   = null;  // root of chain selected in step 03
+let _cascDlCyInstance = null;  // Cytoscape instance for post-gen download graph
+let _cascDlDownloaded = new Set(); // node_ids already downloaded this session
+
+const PHASE_COLORS = {
+  'Initiate':    { bg:'#4a7fba', border:'#1a4a7a', text:'#e8f4fd' },
+  'Confirm':     { bg:'#7b6fbf', border:'#3d2d8a', text:'#f0eefa' },
+  'Design-Build':{ bg:'#c97c1a', border:'#7a4400', text:'#fff3d8' },
+  'Integrate':   { bg:'#c96b50', border:'#8a2800', text:'#ffeee8' },
+  'Deploy':      { bg:'#6aaa38', border:'#2a6000', text:'#e8ffe0' },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CASCADE INIT
+// ═══════════════════════════════════════════════════════════════════════════
+async function cascInit() {
+  try {
+    const res  = await fetch(`${srv()}/cascade/graph-data`);
+    const data = await res.json();
+    _cascGraphData = data.data;
+
+    // Pre-load grounding status so cascBuildDocGrid() can run synchronously.
+    // Falls back gracefully: if endpoint fails or user has no access,
+    // _grndStatus stays empty and cascBuildDocGrid treats all nodes as grounded.
+    if(!_grndStatus.length) {
+      try {
+        const gr = await fetch(`${srv()}/admin/grounding`);
+        if(gr.ok) {
+          const gd = await gr.json();
+          if(gd.success) _grndStatus = gd.nodes;
+        }
+      } catch(e) { /* no grounding data — all nodes treated as grounded */ }
+    }
+
+    cascBuildDocGrid();   // now synchronous — grounding already loaded
+    await cascLoadSessionsForDelta();
+  } catch(e) { console.warn('Cascade init failed:', e.message); }
+}
+
+function cascBuildDocGrid() {
+  if(!_cascGraphData) return;
+  const container = document.getElementById('cascDocGrid');
+  if(!container) return;
+  container.innerHTML = '';
+  _cascRootNodeId = null;
+
+  // If no grounding data (admin endpoint not accessible for this user, or nothing
+  // uploaded yet), treat every node as grounded so the grid is fully usable.
+  const groundedSet = _grndStatus.length
+    ? new Set(_grndStatus.filter(n => n.is_grounded).map(n => n.node_id))
+    : new Set(_cascGraphData.nodes.map(n => n.id));
+
+  // ── No-grounding banner ──────────────────────────────────────────────────
+  if(_grndStatus.length && groundedSet.size === 0) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.35);border-radius:9px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:8px';
+    banner.innerHTML = `<span style="font-size:16px">⚠</span><span>No reference documents have been uploaded yet. Ask your <strong>Admin</strong> to upload grounding files so documents can be generated. You can still proceed and Claude will generate from context only.</span>`;
+    container.appendChild(banner);
+    // When no grounding at all, unlock all nodes so user isn't completely blocked
+    _cascGraphData.nodes.forEach(n => groundedSet.add(n.id));
+  }
+
+  // ── Root chain picker ────────────────────────────────────────────────────
+  const rootPicker = document.createElement('div');
+  rootPicker.className = 'casc-root-picker';
+  rootPicker.id = 'cascRootPickerWrap';
+  // Only grounded nodes can be roots (they must have a reference to start from)
+  const rootOptions = _cascGraphData.nodes
+    .filter(n => groundedSet.has(n.id))
+    .map(n => `<option value="${n.id}">${n.label} (${n.phase})</option>`)
+    .join('');
+  rootPicker.innerHTML = `
+    <span class="casc-root-picker-label">Start Chain From</span>
+    <select id="cascRootSel" onchange="cascSetRoot(this.value)">
+      <option value="">— All grounded documents —</option>
+      ${rootOptions}
+    </select>
+    <span class="casc-root-hint" id="cascRootHint">${groundedSet.size} grounded document${groundedSet.size!==1?'s':''} available</span>`;
+  container.appendChild(rootPicker);
+
+  // ── Phase groups ─────────────────────────────────────────────────────────
+  const phases = ['Initiate','Confirm','Design-Build','Integrate','Deploy'];
+  phases.forEach(phase => {
+    const nodes = _cascGraphData.nodes.filter(n => n.phase === phase);
+    if(!nodes.length) return;
+
+    const grp = document.createElement('div');
+    grp.className = 'casc-phase-group';
+    grp.innerHTML = `<div class="casc-phase-hdr">${phase} (${nodes.length})</div>`;
+
+    const grid = document.createElement('div');
+    grid.className = 'casc-doc-grid';
+
+    nodes.forEach(n => {
+      const isGrounded = groundedSet.has(n.id);
+      const tierClass  = n.tier.toLowerCase();
+      const chip = document.createElement('label');
+      chip.className   = 'casc-doc-chip' + (isGrounded ? ' sel' : ' grayed');
+      chip.dataset.nodeId = n.id;
+      const badge = !isGrounded
+        ? `<span class="casc-chip-badge">no ref</span>`
+        : '';
+      chip.innerHTML = `
+        <input type="checkbox" value="${n.id}" ${isGrounded ? 'checked' : 'disabled'}>
+        <span class="tier-dot ${tierClass}"></span>
+        <span style="flex:1;font-size:11px">${n.label}</span>${badge}`;
+      if(isGrounded) {
+        chip.querySelector('input').addEventListener('change', function(){
+          chip.classList.toggle('sel', this.checked);
+        });
+      }
+      grid.appendChild(chip);
+    });
+
+    grp.appendChild(grid);
+    container.appendChild(grp);
+  });
+
+  // Update "Select All" button to reflect actual selectable (grounded) count
+  const selAllBtn = document.querySelector('#cascNewInputSection .casc-sel-btn');
+  if(selAllBtn && selAllBtn.textContent.startsWith('Select All')) {
+    selAllBtn.textContent = `Select All (${groundedSet.size})`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODE / SELECTION HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+function setCascMode(mode) {
+  _cascMode = mode;
+  document.getElementById('cascModeNew').classList.toggle('on', mode==='new');
+  document.getElementById('cascModeDelta').classList.toggle('on', mode==='delta');
+  document.getElementById('cascNewInputSection').style.display   = mode==='new'   ? '' : 'none';
+  document.getElementById('cascDeltaInputSection').style.display = mode==='delta' ? '' : 'none';
+  document.getElementById('cascDeltaScopePanel').style.display   = 'none';
+}
+
+function cascSelectAll() {
+  document.querySelectorAll('#cascDocGrid input[type=checkbox]:not([disabled])').forEach(c => {
+    c.checked = true; c.closest('.casc-doc-chip').classList.add('sel');
+  });
+}
+function cascClearAll() {
+  document.querySelectorAll('#cascDocGrid input[type=checkbox]:not([disabled])').forEach(c => {
+    c.checked = false; c.closest('.casc-doc-chip').classList.remove('sel');
+  });
+}
+function cascSelectPhase(phase) {
+  document.querySelectorAll('#cascDocGrid .casc-phase-group').forEach(g => {
+    if(g.querySelector('.casc-phase-hdr').textContent.startsWith(phase)) {
+      g.querySelectorAll('input[type=checkbox]:not([disabled])').forEach(c => {
+        c.checked = true; c.closest('.casc-doc-chip').classList.add('sel');
+      });
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHAIN ROOT SELECTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+// BFS from rootId, returns Set of all transitive descendant node_ids (root not included)
+function cascBfsDescendants(rootId) {
+  if(!_cascGraphData) return new Set();
+  const visited = new Set();
+  const queue   = [rootId];
+  while(queue.length) {
+    const cur = queue.shift();
+    if(visited.has(cur)) continue;
+    visited.add(cur);
+    _cascGraphData.edges.forEach(e => {
+      if(e.source === cur && !visited.has(e.target)) queue.push(e.target);
+    });
+  }
+  visited.delete(rootId);
+  return visited;
+}
+
+function cascSetRoot(nodeId) {
+  _cascRootNodeId = nodeId || null;
+  if(!_cascGraphData) return;
+
+  const groundedSet = new Set(_grndStatus.filter(n => n.is_grounded).map(n => n.node_id));
+  let eligibleSet;
+
+  if(!nodeId) {
+    // No root selected — all grounded docs are eligible
+    eligibleSet = groundedSet;
+    const hint = document.getElementById('cascRootHint');
+    if(hint) hint.textContent = `${groundedSet.size} grounded document${groundedSet.size!==1?'s':''} available`;
+  } else {
+    // Eligible = root itself + its descendants, intersected with grounded
+    const descendants = cascBfsDescendants(nodeId);
+    descendants.add(nodeId);
+    eligibleSet = new Set([...descendants].filter(id => groundedSet.has(id)));
+    const generateCount = eligibleSet.size - 1; // root is INPUT, not generated
+    const hint = document.getElementById('cascRootHint');
+    if(hint) hint.textContent = `${generateCount} document${generateCount!==1?'s':''} will be generated (root is your input)`;
+  }
+
+  // Update every chip: enable if eligible, gray out if not
+  // Root chip itself stays checked (shows it's the source) but gets "INPUT" badge
+  document.querySelectorAll('#cascDocGrid .casc-doc-chip').forEach(chip => {
+    const nid = chip.dataset.nodeId;
+    const cb  = chip.querySelector('input[type=checkbox]');
+
+    // Remove any previous root-source styling
+    chip.classList.remove('casc-root-source');
+    const oldBadge = chip.querySelector('.casc-root-src-badge');
+    if(oldBadge) oldBadge.remove();
+
+    if(nodeId && nid === nodeId) {
+      // This IS the root — show as source, not a generation target
+      chip.classList.remove('grayed');
+      chip.classList.add('casc-root-source');
+      cb.disabled = false;
+      cb.checked  = false; // unchecked so it won't be collected as selected
+      const badge = document.createElement('span');
+      badge.className = 'casc-chip-badge casc-root-src-badge';
+      badge.textContent = 'INPUT';
+      badge.style.cssText = 'color:#A100FF;border-color:#A100FF;background:rgba(161,0,255,0.08)';
+      chip.appendChild(badge);
+    } else if(eligibleSet.has(nid)) {
+      chip.classList.remove('grayed');
+      cb.disabled = false;
+      cb.checked  = true;
+      chip.classList.add('sel');
+    } else {
+      chip.classList.add('grayed');
+      chip.classList.remove('sel');
+      cb.disabled = true;
+      cb.checked  = false;
+    }
+  });
+}
+
+function setDeltaType(type) {
+  _deltaType = type;
+  ['prompt','delta_section','full_doc'].forEach(t => {
+    const id = 'deltaType' + (t==='prompt'?'Prompt':t==='delta_section'?'Delta':'Full');
+    document.getElementById(id)?.classList.toggle('on', t===type);
+  });
+  document.getElementById('deltaPromptArea').style.display = type==='prompt' ? '' : 'none';
+  document.getElementById('deltaFileArea').style.display   = type!=='prompt' ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FILE HANDLING
+// ═══════════════════════════════════════════════════════════════════════════
+function cascOnFileSelect(input) {
+  _cascInputFile = input.files[0] || null;
+  document.getElementById('cascFileChosen').textContent = _cascInputFile ? _cascInputFile.name : '';
+}
+function cascHandleDrop(e) {
+  e.preventDefault();
+  document.getElementById('cascDropZone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file){ _cascInputFile = file; document.getElementById('cascFileChosen').textContent = file.name; }
+}
+function deltaOnFileSelect(input) {
+  _deltaInputFile = input.files[0] || null;
+  document.getElementById('deltaFileChosen').textContent = _deltaInputFile ? _deltaInputFile.name : '';
+}
+function deltaHandleDrop(e) {
+  e.preventDefault();
+  document.getElementById('deltaDropZone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file){ _deltaInputFile = file; document.getElementById('deltaFileChosen').textContent = file.name; }
+}
+
+async function fileToBase64(file) {
+  return new Promise((resolve,reject) => {
+    const r = new FileReader();
+    r.onload  = () => resolve(r.result.split(',')[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LAUNCH NEW CASCADE
+// ═══════════════════════════════════════════════════════════════════════════
+async function cascLaunch() {
+  if(!_cascInputFile){ showToast('Please upload a source document first.','error'); return; }
+
+  // Exclude the root/parent document — it is the user's input, not something to generate
+  const selected = Array.from(document.querySelectorAll('#cascDocGrid input[type=checkbox]:checked'))
+    .map(c => c.value)
+    .filter(id => id !== _cascRootNodeId);
+  if(!selected.length){ showToast('Please select at least one document to generate.','error'); return; }
+
+  const btn = document.getElementById('cascLaunchBtn');
+  btn.disabled = true; btn.textContent = 'Starting cascade…';
+
+  const ext    = _cascInputFile.name.split('.').pop().toLowerCase();
+  const b64    = await fileToBase64(_cascInputFile);
+
+  try {
+    const res = await fetch(`${srv()}/cascade/start`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        fileData:    { type:'base64', ext, content:b64, name:_cascInputFile.name },
+        selectedNodes: selected,
+        rootNodeId:  _cascRootNodeId || null,
+        username:    session?.username || 'unknown',
+      }),
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail || 'Cascade start failed');
+
+    _cascSessionId = data.sessionId;
+    _cascTotalDocs = data.totalDocs;
+    _cascDoneCount = 0;
+    _cascNodeStates = {};
+    _cascDocs       = {};
+    _cascDlDownloaded = new Set();
+    if(_cascDlCyInstance){ _cascDlCyInstance.destroy(); _cascDlCyInstance = null; }
+    const dlWrap = document.getElementById('cascDlGraphWrap');
+    if(dlWrap) dlWrap.style.display = 'none';
+
+    // Show active section + initialise graph
+    document.getElementById('cascActiveSection').style.display = '';
+    document.getElementById('cascLibSection').style.display    = 'none';
+    cascInitGraph(selected);
+    cascConnectSSE(data.sessionId);
+
+    btn.textContent = '⚡ Generate Selected Documents';
+    btn.disabled    = false;
+  } catch(err) {
+    showToast(err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '⚡ Generate Selected Documents';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CYTOSCAPE GRAPH
+// ═══════════════════════════════════════════════════════════════════════════
+function cascInitGraph(selectedNodes) {
+  if(!_cascGraphData) return;
+  if(!window._cascCyReady){ window._cascPendingInit = ()=>cascInitGraph(selectedNodes); return; }
+
+  const selSet = new Set(selectedNodes);
+  const nodes  = _cascGraphData.nodes
+    .filter(n => selSet.has(n.id))
+    .map(n => ({ group:'nodes', data:{ id:n.id, label:n.label, phase:n.phase, tier:n.tier } }));
+  const edges  = _cascGraphData.edges
+    .filter(e => selSet.has(e.source) && selSet.has(e.target))
+    .map(e => ({ group:'edges', data:{ id:`${e.source}_${e.target}`, source:e.source, target:e.target } }));
+
+  const cyEl = document.getElementById('cascCy');
+  if(_cascCyInstance){ _cascCyInstance.destroy(); _cascCyInstance = null; }
+
+  _cascCyInstance = cytoscape({
+    container: cyEl,
+    elements: [...nodes, ...edges],
+    style: buildCascCyStyle(),
+    minZoom: 0.1, maxZoom: 3, wheelSensitivity: 0.3,
+  });
+
+  _cascCyInstance.layout({
+    name:'dagre', rankDir:'TB', nodeSep:45, rankSep:60,
+    animate:false, padding:30,
+  }).run();
+
+  _cascCyInstance.on('tap','node', evt => {
+    const d = evt.target.data();
+    const doc = _cascDocs[d.id];
+    if(doc){ cascOpenPreview(d, doc); }
+  });
+
+  // All nodes start idle
+  selectedNodes.forEach(id => { _cascNodeStates[id] = 'idle'; });
+}
+
+function buildCascCyStyle() {
+  const phaseStyles = Object.entries(PHASE_COLORS).map(([phase, c]) => ({
+    selector: `node[phase="${phase}"]`,
+    style: { 'background-color':c.bg, 'border-color':c.border, 'color':c.text },
+  }));
+  return [
+    { selector:'node', style:{
+        'shape':'round-rectangle','width':'label','height':32,'padding':12,
+        'label':'data(label)','font-size':11,'font-family':'Segoe UI,system-ui,sans-serif',
+        'font-weight':'500','text-valign':'center','text-halign':'center',
+        'border-width':1,'border-style':'solid','opacity':0.4,
+        'transition-property':'opacity background-color border-color border-width',
+        'transition-duration':'0.2s',
+    }},
+    ...phaseStyles,
+    { selector:'edge', style:{
+        'width':1,'line-color':'#C4BEDA','target-arrow-color':'#C4BEDA',
+        'target-arrow-shape':'triangle','arrow-scale':0.7,
+        'curve-style':'bezier','opacity':0.4,
+    }},
+    // Node states via classes
+    { selector:'node.casc-queued',     style:{ 'border-width':2,'border-style':'dashed','border-color':'#A100FF','opacity':0.75 }},
+    { selector:'node.casc-generating', style:{ 'border-width':2,'border-color':'#A100FF','opacity':1,'background-color':'#F0DFFB' }},
+    { selector:'node.casc-complete',   style:{ 'opacity':1,'border-width':1 }},
+    { selector:'node.casc-error',      style:{ 'border-color':'#C0296B','border-width':2,'opacity':1 }},
+    { selector:'node.casc-finalised',  style:{ 'border-color':'#FFB800','border-width':2,'opacity':1 }},
+  ];
+}
+
+function cascSetNodeState(nodeId, state) {
+  _cascNodeStates[nodeId] = state;
+  if(!_cascCyInstance) return;
+  const node = _cascCyInstance.$(`#${nodeId}`);
+  if(!node.length) return;
+  node.removeClass('casc-queued casc-generating casc-complete casc-error casc-finalised');
+  if(state !== 'idle') node.addClass(`casc-${state}`);
+}
+
+function cascOpenPreview(nodeData, doc) {
+  document.getElementById('cascPreviewTitle').textContent = nodeData.label || nodeData.id;
+  document.getElementById('cascPreviewMeta').textContent  =
+    `${(doc.output_format||'').toUpperCase()} · v${doc.version||1}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SSE EVENT LISTENER
+// ═══════════════════════════════════════════════════════════════════════════
+function cascConnectSSE(sessionId) {
+  const es = new EventSource(`${srv()}/cascade/stream/${sessionId}`);
+
+  es.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      cascHandleEvent(msg.event, msg.data);
+    } catch(err) { console.warn('SSE parse error', err); }
+  };
+
+  es.onerror = () => {
+    es.close();
+    if(_cascDoneCount < _cascTotalDocs){
+      console.warn('SSE stream closed before completion');
+    }
+  };
+}
+
+function cascHandleEvent(event, data) {
+  switch(event) {
+
+    case 'session_start':
+      updateProgress('Extracting project context…', 0, data.total_docs);
+      break;
+
+    case 'context_ready':
+      updateProgress(
+        `Context: ${data.project_name} / ${data.client_name}`,
+        0, _cascTotalDocs
+      );
+      break;
+
+    case 'waves_planned':
+      updateProgress(`${data.total_waves} waves planned for ${data.total_docs} documents`, 0, data.total_docs);
+      break;
+
+    case 'wave_start':
+      updateProgress(
+        `Wave ${data.wave}/${data.total_waves}: ${data.labels.slice(0,3).join(', ')}${data.labels.length>3?'…':''}`,
+        _cascDoneCount, _cascTotalDocs
+      );
+      break;
+
+    case 'node_queued':
+      cascSetNodeState(data.node_id, 'queued');
+      break;
+
+    case 'node_generating':
+      cascSetNodeState(data.node_id, 'generating');
+      if(_cascCyInstance){
+        const node = _cascCyInstance.$(`#${data.node_id}`);
+        if(node.length){ _cascCyInstance.animate({ fit:{ eles:node, padding:80 }},{ duration:300 }); }
+      }
+      // Clear preview for this doc
+      const nodeInfo = _cascGraphData?.nodes.find(n=>n.id===data.node_id);
+      document.getElementById('cascPreviewTitle').textContent = nodeInfo?.label || data.node_id;
+      document.getElementById('cascPreviewMeta').textContent  = 'Generating…';
+      document.getElementById('cascPreviewBody').textContent  = '';
+      break;
+
+    case 'content_chunk':
+      if(document.getElementById('cascPreviewTitle').textContent === (_cascGraphData?.nodes.find(n=>n.id===data.node_id)?.label||data.node_id)){
+        document.getElementById('cascPreviewBody').textContent += data.chunk;
+        const pb = document.getElementById('cascPreviewBody');
+        pb.scrollTop = pb.scrollHeight;
+      }
+      break;
+
+    case 'node_complete':
+      cascSetNodeState(data.node_id, 'complete');
+      _cascDocs[data.node_id] = data;
+      _cascDoneCount++;
+      updateProgress(
+        `Generated: ${(_cascGraphData?.nodes.find(n=>n.id===data.node_id)?.label)||data.node_id}`,
+        _cascDoneCount, _cascTotalDocs
+      );
+      break;
+
+    case 'node_error':
+      cascSetNodeState(data.node_id, 'error');
+      break;
+
+    case 'node_updating':
+      cascSetNodeState(data.node_id, 'generating');
+      updateProgress(`Updating v${data.from_version}→v${data.to_version}: ${data.node_id}`, _cascDoneCount, _cascTotalDocs);
+      break;
+
+    case 'node_updated':
+      cascSetNodeState(data.node_id, 'complete');
+      _cascDocs[data.node_id] = data;
+      _cascDoneCount++;
+      updateProgress(`Updated: ${data.node_id} v${data.version}`, _cascDoneCount, _cascTotalDocs);
+      break;
+
+    case 'node_skipped_finalised':
+      updateProgress(`Skipped (finalised): ${data.node_id}`, _cascDoneCount, _cascTotalDocs);
+      break;
+
+    case 'session_complete':
+    case 'delta_complete':
+      updateProgress('All documents generated!', _cascTotalDocs, _cascTotalDocs);
+      if(_cascCyInstance) _cascCyInstance.fit(_cascCyInstance.elements(), 40);
+      cascShowLibrary();
+      showToast(`✓ Cascade complete — ${data.docs_generated||_cascDoneCount} documents generated`);
+      break;
+
+    case 'session_error':
+      showToast('Cascade error: ' + data.error, 'error');
+      break;
+
+    case 'stream_end':
+      break;
+  }
+}
+
+function updateProgress(label, done, total) {
+  document.getElementById('cascProgressLabel').textContent = label;
+  document.getElementById('cascProgressCount').textContent = `${done} / ${total}`;
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  document.getElementById('cascProgressBar').style.width = pct + '%';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POST-GENERATION LIBRARY
+// ═══════════════════════════════════════════════════════════════════════════
+async function cascShowLibrary() {
+  if(!_cascSessionId) return;
+  _cascDlDownloaded = new Set();
+  document.getElementById('cascLibSection').style.display = '';
+  try {
+    const res  = await fetch(`${srv()}/cascade/session/${_cascSessionId}`);
+    const data = await res.json();
+    const docs = data.documents || [];
+    cascRenderLibTable(docs);
+    cascBuildDownloadGraph(docs);
+  } catch(e) { console.warn('Library load failed:', e); }
+}
+
+function cascRenderLibTable(docs) {
+  const wrap = document.getElementById('cascDocLibTable');
+  if(!docs.length){ wrap.innerHTML='<div style="color:var(--muted);font-size:12px;padding:12px">No documents generated.</div>'; return; }
+
+  const rows = docs.map(d => {
+    const badge = d.is_finalised
+      ? '<span class="casc-final-badge">FINALISED</span>'
+      : '<span class="casc-draft-badge">Draft</span>';
+    const node = _cascGraphData?.nodes.find(n=>n.id===d.node_id);
+    return `<tr>
+      <td style="color:var(--text)">${node?.label||d.node_id}</td>
+      <td style="color:var(--muted)">${node?.phase||''}</td>
+      <td><span style="font-size:10px;background:var(--surface2);border:1px solid var(--border2);padding:2px 6px;border-radius:5px;color:var(--muted)">${(d.output_format||'').toUpperCase()}</span></td>
+      <td style="color:var(--muted)">v${d.version}</td>
+      <td>${badge}</td>
+      <td>
+        <a href="${srv()}/download/${d.file_id}?name=${encodeURIComponent(d.file_name)}" download
+           style="color:var(--acc-l);font-size:11px;text-decoration:none">Download</a>
+        ${!d.is_finalised ? `&nbsp;·&nbsp;<a href="#" onclick="cascFinalise('${d.node_id}',${d.version});return false" style="color:var(--gold);font-size:11px">Finalise</a>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table class="casc-lib-table">
+    <thead><tr><th>Document</th><th>Phase</th><th>Format</th><th>Ver</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POST-GENERATION NEON DOWNLOAD GRAPH
+// ═══════════════════════════════════════════════════════════════════════════
+function cascBuildDownloadGraph(docs) {
+  if(!_cascGraphData || !window._cascCyReady) return;
+
+  const wrap = document.getElementById('cascDlGraphWrap');
+  if(!wrap) return;
+  wrap.style.display = '';
+
+  // Map node_id → doc for quick lookup
+  const docMap = {};
+  docs.forEach(d => { docMap[d.node_id] = d; });
+  const generatedSet = new Set(Object.keys(docMap));
+
+  // Include all nodes that were selected for generation (in _cascNodeStates)
+  const selectedSet = new Set(Object.keys(_cascNodeStates));
+  if(!selectedSet.size) return;
+
+  const elements = [];
+  _cascGraphData.nodes
+    .filter(n => selectedSet.has(n.id))
+    .forEach(n => {
+      elements.push({ group:'nodes', data:{
+        id: n.id, label: n.label, phase: n.phase, tier: n.tier,
+        hasDoc: generatedSet.has(n.id) ? 'yes' : 'no',
+        fileId:   docMap[n.id]?.file_id   || '',
+        fileName: docMap[n.id]?.file_name  || '',
+      }});
+    });
+
+  _cascGraphData.edges
+    .filter(e => selectedSet.has(e.source) && selectedSet.has(e.target))
+    .forEach(e => {
+      elements.push({ group:'edges', data:{
+        id: `dl_${e.source}_${e.target}`, source: e.source, target: e.target,
+      }});
+    });
+
+  if(_cascDlCyInstance){ _cascDlCyInstance.destroy(); _cascDlCyInstance = null; }
+
+  const phaseStyles = Object.entries(PHASE_COLORS).map(([phase, c]) => ({
+    selector: `node[phase="${phase}"]`,
+    style: { 'background-color': c.bg, 'border-color': c.border, 'color': c.text },
+  }));
+
+  _cascDlCyInstance = cytoscape({
+    container: document.getElementById('cascDlCy'),
+    elements,
+    style: [
+      { selector: 'node', style: {
+        'shape': 'round-rectangle', 'width': 'label', 'height': 32, 'padding': 12,
+        'label': 'data(label)', 'font-size': 11,
+        'font-family': 'Segoe UI,system-ui,sans-serif', 'font-weight': '600',
+        'text-valign': 'center', 'text-halign': 'center',
+        'border-width': 1.5, 'border-style': 'solid', 'opacity': 0.35,
+        'transition-property': 'opacity border-width border-color shadow-blur shadow-color',
+        'transition-duration': '0.3s',
+      }},
+      ...phaseStyles,
+      { selector: 'edge', style: {
+        'width': 1.2, 'line-color': '#C4BEDA', 'target-arrow-color': '#C4BEDA',
+        'target-arrow-shape': 'triangle', 'arrow-scale': 0.7,
+        'curve-style': 'bezier', 'opacity': 0.3,
+      }},
+      // Nodes that have a generated document — neon downloadable
+      { selector: 'node[hasDoc="yes"]', style: {
+        'opacity': 1, 'border-width': 2.5, 'cursor': 'pointer',
+        'border-color': '#A100FF',
+        'shadow-blur': 20, 'shadow-color': '#A100FF',
+        'shadow-offset-x': 0, 'shadow-offset-y': 0, 'shadow-opacity': 0.85,
+      }},
+      // Edge active when both endpoints have docs
+      { selector: 'edge.dl-active', style: {
+        'line-color': '#A100FF55', 'target-arrow-color': '#A100FF55',
+        'opacity': 0.6, 'width': 1.5,
+      }},
+      // Downloaded state (user clicked and downloaded)
+      { selector: 'node.dl-downloaded', style: {
+        'border-color': '#FFB800', 'border-width': 2.5,
+        'shadow-color': '#FFB800', 'shadow-blur': 14, 'shadow-opacity': 0.7,
+      }},
+      // Hover highlight
+      { selector: 'node[hasDoc="yes"]:active', style: { 'opacity': 0.8 }},
+    ],
+    minZoom: 0.1, maxZoom: 3, wheelSensitivity: 0.3,
+  });
+
+  _cascDlCyInstance.layout({
+    name: 'dagre', rankDir: 'TB', nodeSep: 50, rankSep: 70,
+    animate: false, padding: 35,
+  }).run();
+
+  // Activate edges where both endpoints have generated docs
+  _cascDlCyInstance.edges().forEach(edge => {
+    const src = edge.data('source');
+    const tgt = edge.data('target');
+    if(generatedSet.has(src) && generatedSet.has(tgt)) edge.addClass('dl-active');
+  });
+
+  // Neon pulse animation: alternate shadow opacity on generated nodes every 900ms
+  const _readyNodes = _cascDlCyInstance.nodes('[hasDoc="yes"]');
+  let _pulseHigh = true;
+  const _pulseInterval = setInterval(() => {
+    if(!_cascDlCyInstance) { clearInterval(_pulseInterval); return; }
+    _readyNodes.forEach(n => {
+      if(n.hasClass('dl-downloaded')) return; // stop pulsing after download
+      n.style({
+        'shadow-opacity': _pulseHigh ? 0.85 : 0.25,
+        'shadow-blur':    _pulseHigh ? 20 : 8,
+      });
+    });
+    _pulseHigh = !_pulseHigh;
+  }, 900);
+
+  // Fit and pan to show the whole graph
+  _cascDlCyInstance.fit(_cascDlCyInstance.elements(), 40);
+
+  // Click handler: download the document
+  _cascDlCyInstance.on('tap', 'node', evt => {
+    const d = evt.target.data();
+    if(d.hasDoc !== 'yes') return;
+    const doc = docMap[d.id];
+    if(!doc?.file_id) return;
+
+    // Trigger browser download
+    const a = document.createElement('a');
+    a.href     = `${srv()}/download/${doc.file_id}?name=${encodeURIComponent(doc.file_name || doc.file_id)}`;
+    a.download = doc.file_name || doc.file_id;
+    a.click();
+
+    // Mark as downloaded — switch to gold neon
+    evt.target.addClass('dl-downloaded');
+    _cascDlDownloaded.add(d.id);
+    showToast(`Downloading: ${d.label}`);
+  });
+
+  // Tooltip on hover
+  _cascDlCyInstance.on('mouseover', 'node', evt => {
+    const d   = evt.target.data();
+    const tip = document.getElementById('cascTooltipDl');
+    if(!tip) return;
+    if(d.hasDoc === 'yes') {
+      const dl = _cascDlDownloaded.has(d.id) ? ' — Downloaded' : ' — Click to download';
+      tip.textContent = d.label + dl;
+      tip.style.display = '';
+    } else {
+      tip.textContent = d.label + ' — Not generated';
+      tip.style.display = '';
+    }
+  });
+  _cascDlCyInstance.on('mouseout', 'node', () => {
+    const tip = document.getElementById('cascTooltipDl');
+    if(tip) tip.style.display = 'none';
+  });
+}
+
+async function cascFinalise(nodeId, version) {
+  if(!_cascSessionId) return;
+  if(!confirm(`Mark ${nodeId} v${version} as Finalised (client signed-off)?`)) return;
+  try {
+    const res = await fetch(`${srv()}/cascade/finalise`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ sessionId:_cascSessionId, nodeId, version, username:session?.username||'unknown' }),
+    });
+    if(res.ok){
+      cascSetNodeState(nodeId, 'finalised');
+      showToast(`${nodeId} v${version} finalised`);
+      cascShowLibrary();
+    }
+  } catch(e) { showToast('Failed to finalise','error'); }
+}
+
+function cascDownloadAll() {
+  // Download each file individually
+  Object.values(_cascDocs).forEach(doc => {
+    if(!doc.file_id) return;
+    const a = document.createElement('a');
+    a.href     = `${srv()}/download/${doc.file_id}?name=${encodeURIComponent(doc.file_name||doc.file_id)}`;
+    a.download = doc.file_name || doc.file_id;
+    a.click();
+  });
+}
+
+function cascTriggerDelta() {
+  _deltaSourceSessionId = _cascSessionId;
+  setCascMode('delta');
+  document.getElementById('tabCascade').click();
+  // Pre-select the current session
+  cascLoadSessionsForDelta().then(() => {
+    const sel = document.getElementById('deltaSessionSel');
+    if(_cascSessionId){
+      for(let i=0; i<sel.options.length; i++){
+        if(sel.options[i].value === _cascSessionId){ sel.selectedIndex=i; break; }
+      }
+    }
+    loadDeltaVersions();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DELTA MODE
+// ═══════════════════════════════════════════════════════════════════════════
+async function cascLoadSessionsForDelta() {
+  try {
+    const res  = await fetch(`${srv()}/cascade/sessions?username=${encodeURIComponent(session?.username||'')}&limit=20`);
+    const data = await res.json();
+    const sel  = document.getElementById('deltaSessionSel');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">— Select session —</option>';
+    (data.sessions||[]).forEach(s => {
+      const opt = document.createElement('option');
+      opt.value       = s.session_id;
+      opt.textContent = `${s.input_file_name} (${new Date(s.created_at).toLocaleDateString()}) — ${s.completed_docs}/${s.total_docs} docs`;
+      sel.appendChild(opt);
+    });
+
+    // Populate node dropdown from knowledge graph
+    const nodeSel = document.getElementById('deltaNodeSel');
+    if(nodeSel && _cascGraphData){
+      nodeSel.innerHTML = '<option value="">— Select document —</option>';
+      _cascGraphData.nodes.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n.id; opt.textContent = n.label;
+        nodeSel.appendChild(opt);
+      });
+    }
+  } catch(e) { console.warn('Session load failed:', e); }
+}
+
+function loadDeltaVersions() {
+  // Simple: just offer v1 through v5 for now
+  const sel = document.getElementById('deltaVersionSel');
+  if(!sel) return;
+  sel.innerHTML = '';
+  for(let v=1; v<=5; v++){
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = `v${v}`;
+    sel.appendChild(opt);
+  }
+}
+
+async function deltaAnalyse() {
+  const sessionId = document.getElementById('deltaSessionSel')?.value;
+  const nodeId    = document.getElementById('deltaNodeSel')?.value;
+  const version   = parseInt(document.getElementById('deltaVersionSel')?.value)||1;
+  if(!sessionId||!nodeId){ showToast('Please select a session and document.','error'); return; }
+
+  const btn = document.getElementById('deltaAnalyseBtn');
+  btn.disabled=true; btn.textContent='Analysing…';
+
+  try {
+    let body = { sessionId, nodeId, fromVersion:version, inputType:_deltaType, username:session?.username||'unknown' };
+
+    if(_deltaType==='prompt'){
+      body.promptText = document.getElementById('deltaPromptText')?.value||'';
+      if(!body.promptText){ showToast('Please describe the change.','error'); btn.disabled=false; btn.textContent='🔍 Analyse Delta Impact'; return; }
+    } else {
+      if(!_deltaInputFile){ showToast('Please upload the updated document.','error'); btn.disabled=false; btn.textContent='🔍 Analyse Delta Impact'; return; }
+      const ext = _deltaInputFile.name.split('.').pop().toLowerCase();
+      const b64 = await fileToBase64(_deltaInputFile);
+      body.fileData = { type:'base64', ext, content:b64, name:_deltaInputFile.name };
+    }
+
+    const res  = await fetch(`${srv()}/cascade/delta/analyse`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail||'Analysis failed');
+
+    _deltaAnalysisResult  = data;
+    _deltaSourceSessionId = sessionId;
+    cascShowDeltaScope(nodeId, data);
+
+  } catch(e){ showToast(e.message,'error'); }
+  btn.disabled=false; btn.textContent='🔍 Analyse Delta Impact';
+}
+
+function cascShowDeltaScope(sourceNodeId, result) {
+  const panel = document.getElementById('cascDeltaScopePanel');
+  panel.style.display = '';
+
+  // Summary
+  const summaryBox = document.getElementById('deltaSummaryBox');
+  summaryBox.innerHTML = `<strong>Delta in ${sourceNodeId}:</strong> ${result.deltaSummary||'See items below.'}<br><br>
+    <strong>Changes identified:</strong> ${(result.deltaItems||[]).map(i=>`<span style="color:${i.type==='added'?'var(--green)':i.type==='removed'?'var(--red)':'var(--gold)'}">&#x25CF;</span> [${i.type}] ${i.section}: ${i.description}`).join('<br>')}`;
+
+  // Affected nodes list
+  const list = document.getElementById('deltaAffectedList');
+  list.innerHTML = '';
+
+  (result.affectedNodes||[]).forEach(aff => {
+    const isFinal = aff.is_finalised;
+    const row     = document.createElement('div');
+    row.className = `delta-aff-row${isFinal?' is-final':''}`;
+    row.dataset.nodeId = aff.node_id;
+
+    row.innerHTML = `
+      <input type="checkbox" id="daff_${aff.node_id}" ${!isFinal?'checked':''} value="${aff.node_id}">
+      <span class="tier-dot ${aff.tier.toLowerCase()}"></span>
+      <div style="flex:1">
+        <div style="font-weight:600;color:var(--text)">${aff.label}</div>
+        <div style="font-size:10px;color:var(--muted)">${aff.phase} · ${aff.impact_type} · v${aff.current_version}→v${aff.next_version}</div>
+        <div style="font-size:10px;color:var(--muted2)">${aff.impact_reason}</div>
+      </div>
+      ${isFinal ? `<div style="font-size:10px;font-weight:700;color:var(--gold)">FINALISED</div>
+        <div class="delta-final-choices">
+          <label><input type="radio" name="fin_${aff.node_id}" value="skip" checked> Skip</label>
+          <label><input type="radio" name="fin_${aff.node_id}" value="include"> Include</label>
+        </div>` : ''}`;
+
+    list.appendChild(row);
+  });
+}
+
+async function deltaApply() {
+  const selectedRows  = Array.from(document.querySelectorAll('#deltaAffectedList input[type=checkbox]:checked')).map(c=>c.value);
+  if(!selectedRows.length){ showToast('Select at least one document to update.','error'); return; }
+
+  // Collect finalised decisions
+  const finalisedDecisions = {};
+  document.querySelectorAll('#deltaAffectedList .delta-aff-row.is-final').forEach(row => {
+    const nodeId = row.dataset.nodeId;
+    const choice = row.querySelector(`input[name="fin_${nodeId}"]:checked`)?.value;
+    finalisedDecisions[nodeId] = (choice==='include');
+  });
+
+  const btn = document.getElementById('deltaApplyBtn');
+  btn.disabled=true; btn.textContent='Applying delta…';
+
+  const sessionId = document.getElementById('deltaSessionSel')?.value;
+  const nodeId    = document.getElementById('deltaNodeSel')?.value;
+
+  try {
+    const res = await fetch(`${srv()}/cascade/delta/apply`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        sourceSessionId:sessionId,
+        deltaSessionId: '', // server generates one
+        deltaNodeId:    nodeId,
+        selectedNodes:  selectedRows,
+        finalisedDecisions,
+        username: session?.username||'unknown',
+      }),
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail||'Apply failed');
+
+    _cascSessionId  = data.deltaSessionId;
+    _cascTotalDocs  = data.totalNodes;
+    _cascDoneCount  = 0;
+    _cascNodeStates = {};
+    _cascDocs       = {};
+
+    document.getElementById('cascActiveSection').style.display = '';
+    cascInitGraph(selectedRows);
+    cascConnectSSE(data.deltaSessionId);
+
+    document.getElementById('cascDeltaScopePanel').style.display = 'none';
+    showToast('Delta cascade started!');
+
+  } catch(e){ showToast(e.message,'error'); }
+  btn.disabled=false; btn.textContent='⚡ Apply Delta to Selected';
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const otCard=document.getElementById('outputTypeCard');
+  const userNote=document.createElement('div');
+  userNote.id='userOutputNote';
+  userNote.style.cssText='display:none;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--teal);background:var(--teal-bg);border:1px solid var(--teal-b);border-radius:8px;padding:8px 12px;';
+  userNote.innerHTML='<span style="font-size:14px">✦</span><span></span>';
+  otCard.appendChild(userNote);
+});
+
+initUserMode();
+
+// ═══════════════════════════════════════════════════════
+// MAIN TAB SWITCHER
+// ═══════════════════════════════════════════════════════
+
+function switchMainTab(tab) {
+  document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('on');
+  document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('on');
+}
+
+// ═══════════════════════════════════════════════════════
+// ASK LIBRARY — Agentic Q&A
+// ═══════════════════════════════════════════════════════
+
+function setAskExample(btn) {
+  document.getElementById('askInput').value = btn.textContent.trim();
+  document.getElementById('askInput').focus();
+}
+
+async function askLibrary() {
+  const input   = document.getElementById('askInput');
+  const results = document.getElementById('askResults');
+  const docLinks= document.getElementById('askDocLinks');
+  const meta    = document.getElementById('askMeta');
+  const btn     = document.getElementById('askBtn');
+
+  const question = input.value.trim();
+  if (!question) { showToast('Please enter a question.', 'error'); return; }
+
+  // Loading state
+  btn.disabled   = true;
+  btn.textContent= 'Asking…';
+  results.className = 'ask-results';
+  results.innerHTML = '<span class="ask-spinner">⟳</span> Searching your document library…';
+  docLinks.style.display = 'none';
+  docLinks.innerHTML     = '';
+  meta.textContent       = '';
+
+  try {
+    const res = await fetch(`${srv()}/ask`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        question,
+        username: session?.username || 'unknown',
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || err.error || 'Request failed');
+    }
+
+    const data = await res.json();
+
+    // Render answer — convert markdown-style links to HTML
+    const answerHtml = (data.answer || 'No answer returned.')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g,
+        '<a class="ask-doc-link" href="$2" download target="_blank"><span class="dl-ico">📥</span>$1</a>')
+      .replace(/\n/g, '<br>');
+
+    results.className = 'ask-results';
+    results.innerHTML = answerHtml;
+
+    // Render document download cards (from agent tool calls)
+    if (data.documents && data.documents.length > 0) {
+      docLinks.style.display = 'flex';
+      data.documents.forEach(doc => {
+        const a = document.createElement('a');
+        a.className   = 'ask-doc-link';
+        a.href        = doc.download_url;
+        a.target      = '_blank';
+        a.download    = doc.file_name || '';
+        a.innerHTML   = `<span class="dl-ico">📥</span><span>${doc.file_name || doc.file_id}</span>`;
+        docLinks.appendChild(a);
+      });
+    }
+
+    // Meta
+    const calls = data.toolCallsMade || 0;
+    meta.textContent = `✦ Agent made ${calls} tool call${calls !== 1 ? 's' : ''} — answer grounded in document library only.`;
+
+  } catch(err) {
+    results.className = 'ask-results';
+    results.innerHTML = `<span style="color:var(--danger)">⚠ ${err.message}</span>`;
+  } finally {
+    btn.disabled   = false;
+    btn.textContent= 'Ask';
+  }
+}
+
+</script>
+</body>
+</html>

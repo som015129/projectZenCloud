@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Zen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background / Splash -->
+    <div id="splash-bg"></div>
+    <div id="splash-overlay"></div>
+
+    <!-- Intro Elements -->
+    <div id="animated-logo-wrapper">
+        <div id="animated-logo-image"></div>
+    </div>
+    <h1 id="animated-text"></h1>
+
+    <!-- Main Content -->
+    <main id="main-content" class="hidden">
+        <section class="agents-grid" id="agents-grid">
+            <div class="agent-card" onclick="window.location.href='Doc_Gen.html'">
+                <h3>Document Generation Agent</h3>
+                <p>Automates project documentation creation and maintenance.</p>
+            </div>
+            <div class="agent-card">
+                <h3>Configuration Agent</h3>
+                <p>Streamlines system setup and parameters deployment.</p>
+            </div>
+            <div class="agent-card">
+                <h3>Data Agent</h3>
+                <p>Manages data migration, transformation, and validation.</p>
+            </div>
+            <div class="agent-card">
+                <h3>Test Agent</h3>
+                <p>Executes automated testing and reports status.</p>
+            </div>
+            <div class="agent-card">
+                <h3>Hypercare & AMS Agent</h3>
+                <p>Provides post-go-live support and continuous monitoring.</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="main.js"></script>
+</body>
+</html>

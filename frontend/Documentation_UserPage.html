@@ -1,0 +1,2660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Document Generation Intelligence · ProjectZen</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap');
+
+/* ═══════════════════════════════════════════════════════
+   DESIGN SYSTEM — Accenture Purple × Claude Coral
+   ═══════════════════════════════════════════════════════ */
+:root {
+  --acc:       #A100FF;
+  --acc-d:     #7000B2;
+  --acc-l:     #C660FF;
+  --acc-bg:    rgba(161,0,255,0.06);
+  --acc-b:     rgba(161,0,255,0.20);
+  --acc-glow:  rgba(161,0,255,0.18);
+  --claude:    #FF6B2B;
+  --claude-l:  #FF9060;
+  --claude-bg: rgba(255,107,43,0.07);
+  --claude-b:  rgba(255,107,43,0.22);
+  --bg:        #070709;
+  --surface:   #0F0F14;
+  --surface2:  #161620;
+  --surface3:  #1E1E2C;
+  --border:    #1E1E2C;
+  --border2:   #28283C;
+  --border3:   #363652;
+  --text:      #F0EEF8;
+  --text2:     #C8C4DC;
+  --muted:     #6B6B90;
+  --muted2:    #3E3E58;
+  --green:     #00E5A0;
+  --green-bg:  rgba(0,229,160,0.06);
+  --green-b:   rgba(0,229,160,0.22);
+  --red:       #FF4D6A;
+  --red-bg:    rgba(255,77,106,0.07);
+  --red-b:     rgba(255,77,106,0.22);
+  --gold:      #FFB800;
+  --gold-bg:   rgba(255,184,0,0.07);
+  --gold-b:    rgba(255,184,0,0.22);
+  --blue:      #4D9FFF;
+  --teal:      #00D4FF;
+  --teal-bg:   rgba(0,212,255,0.06);
+  --teal-b:    rgba(0,212,255,0.20);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at -10% -20%, rgba(161,0,255,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 110% 110%, rgba(255,107,43,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 30% at 50% 0%,   rgba(161,0,255,0.06) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(7,7,9,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 24px; height: 56px;
+}
+.topbar-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 700; font-size: 15px; color: var(--text); white-space: nowrap;
+}
+.topbar-brand-logo {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--acc), var(--acc-d));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; box-shadow: 0 0 12px var(--acc-glow);
+}
+.topbar-brand-sub { font-size: 10px; color: var(--muted); font-weight: 400; letter-spacing: .04em; }
+.topbar-sep { width: 1px; height: 24px; background: var(--border2); }
+.srv-row { display: flex; align-items: center; gap: 8px; flex: 1; }
+.srv-row input {
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text2); border-radius: 8px; padding: 6px 12px;
+  font-size: 12px; font-family: 'DM Mono', monospace; width: 220px;
+  outline: none; transition: border .2s;
+}
+.srv-row input:focus { border-color: var(--acc-b); }
+.srv-ping { padding: 6px 12px; font-size: 11px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; color: var(--text2); cursor: pointer; transition: border .2s; }
+.srv-ping:hover { border-color: var(--acc-b); }
+.sdot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; background: var(--muted); }
+.sdot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.sdot.off { background: var(--red); }
+.sdot.checking { background: var(--gold); animation: pulse-dot .8s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.user-row { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.user-row label { font-size: 11px; color: var(--muted); }
+.user-row input {
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text2); border-radius: 8px; padding: 5px 10px;
+  font-size: 12px; width: 140px; outline: none; transition: border .2s;
+}
+.user-row input:focus { border-color: var(--acc-b); }
+
+/* ── PAGE LAYOUT ── */
+.page {
+  position: relative; z-index: 1;
+  max-width: 860px; margin: 0 auto;
+  padding: 36px 24px 80px;
+}
+
+/* ── HERO ── */
+.hero { text-align: center; margin-bottom: 36px; }
+.hero-eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--acc-l); margin-bottom: 14px;
+}
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(28px, 5vw, 42px); font-weight: 900; line-height: 1.18;
+  color: var(--text); margin-bottom: 12px;
+}
+.hero-title em { font-style: italic; color: var(--acc-l); }
+.hero-sub { font-size: 15px; color: var(--text2); max-width: 560px; margin: 0 auto 18px; line-height: 1.65; }
+.hero-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.hero-badge {
+  padding: 5px 13px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  background: var(--surface2); border: 1px solid var(--border2); color: var(--text2);
+}
+
+/* ── TABS ── */
+.main-tabs {
+  display: flex; gap: 6px; margin-bottom: 20px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 5px;
+}
+.main-tab {
+  flex: 1; padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; background: transparent; color: var(--muted);
+  transition: all .2s;
+}
+.main-tab.on {
+  background: linear-gradient(135deg, var(--acc), var(--acc-d));
+  color: #fff; box-shadow: 0 2px 10px var(--acc-glow);
+}
+.main-tab:not(.on):hover { background: var(--surface2); color: var(--text2); }
+.tab-panel { display: none; }
+.tab-panel.on { display: block; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 18px 20px; margin-bottom: 14px;
+  position: relative; overflow: hidden;
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(161,0,255,0.15), transparent);
+}
+.card-label {
+  display: flex; align-items: center; gap: 9px; margin-bottom: 13px;
+}
+.step-n {
+  width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; font-size: 11px; font-weight: 700;
+  background: var(--acc-bg); border: 1px solid var(--acc-b); color: var(--acc-l);
+  flex-shrink: 0;
+}
+.label-txt { font-weight: 600; font-size: 14px; color: var(--text); }
+.badge { padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+.badge-req { background: rgba(255,107,43,.12); color: var(--claude-l); border: 1px solid var(--claude-b); }
+.badge-opt { background: var(--acc-bg); color: var(--acc-l); border: 1px solid var(--acc-b); }
+
+/* ── SELECT & INPUTS ── */
+select, input[type="text"], textarea {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 10px; padding: 10px 13px;
+  font-size: 13px; font-family: 'DM Sans', sans-serif;
+  outline: none; transition: border .2s, box-shadow .2s;
+}
+select:focus, input[type="text"]:focus, textarea:focus {
+  border-color: var(--acc-b); box-shadow: 0 0 0 3px var(--acc-bg);
+}
+select option { background: var(--surface2); }
+textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+
+/* ── DROP ZONES ── */
+.drop-zone {
+  border: 2px dashed var(--border2); border-radius: 12px;
+  padding: 22px 16px; text-align: center; cursor: pointer;
+  transition: border .2s, background .2s; position: relative;
+}
+.drop-zone:hover, .drop-zone.drag { border-color: var(--acc-l); background: var(--acc-bg); }
+.drop-zone.filled { border-color: var(--green-b); background: var(--green-bg); border-style: solid; }
+.dz-icon { font-size: 24px; display: block; margin-bottom: 6px; }
+.dz-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+.dz-sub { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+.type-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.chip { padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 700; letter-spacing: .04em; }
+.chip.doc { background: rgba(77,159,255,.12); color: #4d9fff; }
+.chip.xl  { background: rgba(0,229,160,.10);  color: #00e5a0; }
+.chip.ppt { background: rgba(255,107,43,.12); color: var(--claude-l); }
+.chip.pdf { background: rgba(255,77,106,.12); color: var(--red); }
+.chip.txt { background: rgba(161,0,255,.10);  color: var(--acc-l); }
+.chip.dat { background: rgba(255,184,0,.10);  color: var(--gold); }
+input[type="file"] { display: none; }
+
+/* ── FILE CHIP ── */
+.file-chip {
+  display: none; align-items: center; gap: 10px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 8px 12px; margin-top: 10px;
+}
+.file-chip.green { border-color: var(--green-b); background: var(--green-bg); }
+.file-chip.purple { border-color: var(--acc-b); background: var(--acc-bg); }
+.file-chip.show { display: flex; }
+.fc-ico { font-size: 18px; }
+.fc-info { flex: 1; min-width: 0; }
+.fc-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-meta { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.fc-rm { background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+.fc-rm:hover { background: var(--red-bg); color: var(--red); }
+
+/* ── FORMAT GRID ── */
+.fmt-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
+.fmt-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 8px; border-radius: 10px; border: 1px solid var(--border2);
+  background: var(--surface2); cursor: pointer; transition: all .2s; color: var(--text2);
+}
+.fmt-btn:hover { border-color: var(--acc-b); background: var(--acc-bg); color: var(--text); }
+.fmt-btn.on { border-color: var(--acc); background: var(--acc-bg); color: var(--acc-l); box-shadow: 0 0 0 2px var(--acc-bg); }
+.fmt-ico { font-size: 20px; }
+.fmt-name { font-size: 11px; font-weight: 700; }
+.fmt-desc { font-size: 9px; color: var(--muted); text-align: center; }
+
+/* ── TOGGLE ── */
+.toggle-row { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; padding: 10px 0; }
+.toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; margin-top: 1px; }
+.toggle-switch input { display: none; }
+.toggle-track { position: absolute; inset: 0; border-radius: 11px; background: var(--border2); transition: background .2s; }
+.toggle-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: all .2s; }
+.toggle-switch input:checked ~ .toggle-track { background: var(--acc); }
+.toggle-switch input:checked ~ .toggle-thumb { left: 21px; background: #fff; }
+.toggle-label-main { font-size: 13px; font-weight: 600; color: var(--text); }
+.toggle-label-sub { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+.user-ref-zone { display: none; }
+.user-ref-zone.open { display: block; }
+.mirror-grid { display: none; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 10px; }
+.mirror-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); cursor: pointer; }
+.mirror-item input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--acc); }
+
+/* ── PROGRESS CARD ── */
+.prog-card { display: none; background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; }
+.prog-card.show { display: block; }
+.prog-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+.steps { display: flex; flex-direction: column; gap: 8px; }
+.step { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; font-size: 12px; color: var(--muted); transition: all .3s; }
+.step.active { border-color: var(--acc-b); background: var(--acc-bg); color: var(--acc-l); }
+.step.done { border-color: var(--green-b); background: var(--green-bg); color: var(--green); }
+.step-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.step.active .step-dot { animation: blink .8s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.step-txt { flex: 1; }
+.step-time { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+.err-box { display: none; background: var(--red-bg); border: 1px solid var(--red-b); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--red); margin-top: 10px; }
+.err-box.show { display: block; }
+
+/* ── RESULT CARD ── */
+.result-card { display: none; background: var(--green-bg); border: 1px solid var(--green-b); border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; }
+.result-card.show { display: flex; flex-direction: column; gap: 12px; }
+.r-name { font-size: 16px; font-weight: 700; color: var(--green); }
+.r-meta { font-size: 11px; color: var(--muted); }
+.r-preview { background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 13px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text2); line-height: 1.7; max-height: 120px; overflow-y: auto; white-space: pre-wrap; }
+.dl-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--green), #00b87c);
+  color: #fff; border: none; border-radius: 10px; padding: 10px 20px;
+  font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none;
+  transition: all .2s; align-self: flex-start;
+}
+.dl-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,229,160,.35); }
+
+/* ── GENERATE BUTTON ── */
+.gen-btn-row { display: flex; gap: 10px; margin-top: 6px; }
+.gen-btn {
+  flex: 1; padding: 14px 20px; font-size: 15px; font-weight: 700;
+  background: linear-gradient(135deg, var(--acc), var(--acc-d));
+  color: #fff; border: none; border-radius: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all .2s; box-shadow: 0 4px 18px var(--acc-glow);
+  position: relative; overflow: hidden;
+}
+.gen-btn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.15), transparent); pointer-events: none; }
+.gen-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--acc-glow); }
+.gen-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+.refine-btn {
+  display: none; padding: 14px 18px; font-size: 13px; font-weight: 700;
+  background: var(--surface2); border: 1px solid var(--border2); color: var(--text2);
+  border-radius: 12px; cursor: pointer; transition: all .2s;
+}
+.refine-btn.show { display: block; }
+.refine-btn:hover { border-color: var(--teal-b); color: var(--teal); background: var(--teal-bg); }
+.refine-btn:disabled { opacity: .4; cursor: not-allowed; }
+@keyframes spin-anim { to { transform: rotate(360deg); } }
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin-anim .7s linear infinite; }
+
+/* ── LIBRARY ── */
+.library-panel { display: none; background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
+.library-panel.show { display: block; }
+.library-header { display: flex; align-items: center; gap: 10px; padding: 13px 16px; cursor: pointer; }
+.library-header-lbl { font-size: 13px; font-weight: 700; color: var(--text2); flex: 1; }
+.library-count { font-size: 11px; color: var(--muted); }
+.library-refresh { background: none; border: 1px solid var(--border2); color: var(--muted); padding: 3px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.library-refresh:hover { border-color: var(--acc-b); color: var(--acc-l); }
+.library-chevron { font-size: 11px; color: var(--muted); transition: transform .2s; }
+.library-chevron.open { transform: rotate(180deg); }
+.library-body { display: none; border-top: 1px solid var(--border); padding: 12px 16px; }
+.library-body.open { display: block; }
+.lib-filters { display: flex; gap: 8px; margin-bottom: 10px; }
+.lib-filter-inp { flex: 1; }
+.lib-format-sel { width: 120px; }
+.lib-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.lib-table th { padding: 6px 10px; text-align: left; color: var(--muted); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border2); }
+.lib-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.lib-table tr:last-child td { border-bottom: none; }
+.lib-fname { font-weight: 600; color: var(--text); font-size: 12px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-template { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.lib-fmt-chip { padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+.lib-fmt-xlsx { background: rgba(0,229,160,.10); color: var(--green); }
+.lib-fmt-docx { background: rgba(77,159,255,.10); color: var(--blue); }
+.lib-fmt-pdf  { background: rgba(255,77,106,.10); color: var(--red); }
+.lib-fmt-pptx { background: rgba(255,107,43,.10); color: var(--claude-l); }
+.lib-fmt-xml  { background: rgba(255,184,0,.10);  color: var(--gold); }
+.lib-dl-btn { background: none; border: 1px solid var(--border2); border-radius: 6px; color: var(--text2); padding: 3px 10px; font-size: 11px; cursor: pointer; }
+.lib-dl-btn:hover { border-color: var(--green-b); color: var(--green); }
+.lib-empty { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
+table { overflow-x: auto; }
+
+/* ── CONV HISTORY ── */
+.conv-panel { display: none; background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
+.conv-panel.show { display: block; }
+.conv-header { display: flex; align-items: center; gap: 10px; padding: 11px 16px; cursor: pointer; }
+.conv-header-lbl { font-size: 12px; font-weight: 700; color: var(--muted); flex: 1; font-family: 'DM Mono', monospace; }
+.conv-turn-count { font-size: 11px; color: var(--muted); }
+.conv-clear-btn { background: none; border: 1px solid var(--border2); border-radius: 6px; color: var(--muted); padding: 3px 8px; font-size: 10px; cursor: pointer; }
+.conv-chevron { font-size: 10px; color: var(--muted); transition: transform .2s; }
+.conv-chevron.open { transform: rotate(180deg); }
+.conv-body { display: none; border-top: 1px solid var(--border); padding: 10px 14px; }
+.conv-body.open { display: block; }
+.conv-turn { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.conv-turn:last-child { border-bottom: none; }
+.turn-badge { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; flex-shrink: 0; margin-top: 2px; }
+.turn-badge.t1 { background: var(--acc-bg); color: var(--acc-l); }
+.turn-badge.t2 { background: var(--teal-bg); color: var(--teal); }
+.turn-badge.t3 { background: var(--claude-bg); color: var(--claude-l); }
+.turn-content { flex: 1; min-width: 0; }
+.turn-label { font-size: 10px; color: var(--muted); margin-bottom: 2px; }
+.turn-summary { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.turn-file { font-size: 11px; color: var(--acc-l); margin-top: 4px; cursor: pointer; }
+.turn-file:hover { text-decoration: underline; }
+
+/* ── ASK LIBRARY ── */
+.ask-wrap { display: flex; flex-direction: column; gap: 12px; }
+.ask-examples { display: flex; flex-wrap: wrap; gap: 7px; }
+.ask-example { background: var(--surface2); border: 1px solid var(--border2); border-radius: 20px; padding: 5px 13px; font-size: 11px; color: var(--text2); cursor: pointer; transition: all .2s; }
+.ask-example:hover { border-color: var(--acc-b); color: var(--acc-l); background: var(--acc-bg); }
+.ask-input-row { display: flex; gap: 8px; }
+.ask-textarea { flex: 1; resize: none; min-height: 60px; }
+.ask-btn { padding: 10px 20px; background: linear-gradient(135deg, var(--acc), var(--acc-d)); color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all .2s; }
+.ask-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px var(--acc-glow); }
+.ask-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.ask-results { background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 14px 16px; font-size: 13px; color: var(--text2); line-height: 1.75; white-space: pre-wrap; min-height: 80px; }
+.ask-results.empty { color: var(--muted); font-style: italic; }
+.ask-doc-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.ask-doc-link { display: flex; align-items: center; gap: 7px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 6px 12px; font-size: 11px; color: var(--text2); text-decoration: none; cursor: pointer; }
+.ask-doc-link:hover { border-color: var(--green-b); color: var(--green); }
+.ask-meta { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+/* ── CASCADE ── */
+.casc-mode-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px; border-radius: 10px; border: 1px solid var(--border2);
+  background: var(--surface2); cursor: pointer; font-size: 13px; font-weight: 600;
+  color: var(--text2); transition: all .2s;
+}
+.casc-mode-btn.on { border-color: var(--acc); background: var(--acc-bg); color: var(--acc-l); }
+.casc-doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.casc-doc-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 8px 10px; cursor: pointer; transition: all .2s;
+}
+.casc-doc-item:hover { border-color: var(--acc-b); background: var(--acc-bg); }
+.casc-doc-item.selected { border-color: var(--acc); background: var(--acc-bg); }
+.casc-doc-item input { accent-color: var(--acc); margin-top: 2px; flex-shrink: 0; }
+.casc-doc-label { font-size: 11px; color: var(--text2); line-height: 1.4; }
+.casc-doc-phase { font-size: 9px; color: var(--muted); margin-top: 2px; }
+.casc-sel-btn { padding: 5px 12px; font-size: 11px; font-weight: 600; background: var(--surface2); border: 1px solid var(--border2); border-radius: 20px; color: var(--text2); cursor: pointer; transition: all .2s; }
+.casc-sel-btn:hover { border-color: var(--acc-b); color: var(--acc-l); }
+.casc-launch-btn {
+  width: 100%; padding: 14px; font-size: 14px; font-weight: 700;
+  background: linear-gradient(135deg, var(--acc), var(--acc-d));
+  color: #fff; border: none; border-radius: 12px; cursor: pointer;
+  transition: all .2s; box-shadow: 0 4px 18px var(--acc-glow); margin-top: 10px;
+}
+.casc-launch-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--acc-glow); }
+.casc-launch-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.casc-progress { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 16px 20px; margin-bottom: 14px; display: none; }
+.casc-progress.show { display: block; }
+.casc-wave-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.casc-items { display: flex; flex-direction: column; gap: 6px; }
+.casc-item { display: flex; align-items: center; gap: 10px; font-size: 12px; padding: 7px 10px; border-radius: 8px; border: 1px solid transparent; }
+.casc-item.waiting { color: var(--muted); }
+.casc-item.running { border-color: var(--acc-b); background: var(--acc-bg); color: var(--acc-l); }
+.casc-item.done    { border-color: var(--green-b); background: var(--green-bg); color: var(--green); }
+.casc-item.failed  { border-color: var(--red-b); background: var(--red-bg); color: var(--red); }
+.casc-item-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.casc-item.running .casc-item-dot { animation: blink .8s infinite; }
+.casc-dl-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.casc-dl-btn { display: flex; align-items: center; gap: 6px; background: var(--green-bg); border: 1px solid var(--green-b); border-radius: 8px; padding: 6px 12px; font-size: 11px; color: var(--green); cursor: pointer; text-decoration: none; }
+.casc-dl-btn:hover { background: rgba(0,229,160,.15); }
+
+/* ── META TOAST (conversation memory) ── */
+.meta-toast { display: none; align-items: flex-start; gap: 10px; background: var(--teal-bg); border: 1px solid var(--teal-b); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+.meta-toast.show { display: flex; }
+.meta-toast-icon { font-size: 20px; color: var(--teal); }
+.meta-toast-body { flex: 1; }
+.meta-toast-title { font-size: 12px; font-weight: 700; color: var(--teal); margin-bottom: 4px; display: flex; align-items: center; gap: 7px; }
+.meta-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 6px var(--teal); animation: blink .8s infinite; }
+.meta-toast-desc { font-size: 11px; color: var(--text2); line-height: 1.6; }
+.meta-toast-turn { font-size: 10px; color: var(--teal); font-family: 'DM Mono', monospace; white-space: nowrap; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 10px 20px; font-size: 13px; font-weight: 600;
+  color: var(--text); z-index: 999; opacity: 0; transition: all .3s; pointer-events: none;
+  max-width: 90vw; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.5);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── ASSIT PROMPT CARD ── */
+.asst-card { display: none; }
+.asst-card.show { display: block; }
+
+/* ── REF INFO ── */
+.ref-info {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--acc-bg); border: 1px solid var(--acc-b); border-radius: 8px;
+  padding: 9px 12px; font-size: 12px; color: var(--text2); line-height: 1.6; margin-bottom: 10px;
+}
+
+/* ── DELTA UPLOAD ── */
+.delta-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.delta-doc-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 9px 11px; cursor: pointer; transition: all .2s;
+}
+.delta-doc-item input { accent-color: var(--acc); margin-top: 2px; }
+.delta-doc-label { font-size: 12px; color: var(--text2); }
+
+@media (max-width: 600px) {
+  .fmt-grid { grid-template-columns: repeat(3,1fr); }
+  .delta-select-grid { grid-template-columns: 1fr; }
+  .srv-row input { width: 140px; }
+  .user-row input { width: 100px; }
+}
+
+/* ── OUTER TABS (User / Admin) ── */
+.outer-tabs { display:flex; gap:6px; margin-bottom:20px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:5px; }
+.outer-tab { flex:1; padding:10px 14px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; border:none; background:transparent; color:var(--muted); transition:all .2s; }
+.outer-tab.on { background:linear-gradient(135deg,var(--acc),var(--acc-d)); color:#fff; box-shadow:0 2px 10px var(--acc-glow); }
+.outer-tab:not(.on):hover { background:var(--surface2); color:var(--text2); }
+.outer-panel { display:none; }
+.outer-panel.on { display:block; }
+
+/* ── CASCADE FULL (graph + SSE) ── */
+.casc-prog-bar-wrap { height:5px; background:var(--surface3); border-radius:3px; overflow:hidden; margin:10px 0; }
+.casc-prog-bar { height:100%; background:linear-gradient(90deg,var(--acc),var(--acc-l)); border-radius:3px; transition:width .4s; width:0; }
+.casc-graph-wrap { height:380px; border:1px solid var(--border2); border-radius:12px; background:var(--surface); position:relative; overflow:hidden; margin:14px 0; }
+.casc-graph-ctrl { position:absolute; top:10px; right:10px; z-index:10; display:flex; gap:6px; }
+.casc-graph-ctrl button { background:rgba(15,15,20,.8); border:1px solid var(--border2); color:var(--text2); border-radius:7px; padding:5px 10px; font-size:11px; cursor:pointer; transition:all .2s; backdrop-filter:blur(6px); }
+.casc-graph-ctrl button:hover { border-color:var(--acc-b); color:var(--acc-l); }
+#cascGraphCy { width:100%; height:100%; }
+
+.casc-dl-graph-wrap { height:300px; border:1px solid var(--border2); border-radius:12px; background:var(--surface); position:relative; overflow:hidden; margin:14px 0; }
+#cascDlGraphCy { width:100%; height:100%; }
+
+.casc-lib-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:12px; }
+.casc-lib-table th { padding:7px 10px; text-align:left; color:var(--muted); font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--border2); }
+.casc-lib-table td { padding:7px 10px; border-bottom:1px solid var(--border3); }
+.casc-lib-table tr:hover td { background:var(--surface2); }
+.casc-lib-btn { padding:4px 10px; border-radius:6px; font-size:10px; font-weight:600; border:1px solid var(--border2); background:var(--surface2); color:var(--text2); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; transition:all .2s; }
+.casc-lib-btn:hover { border-color:var(--acc-b); color:var(--acc-l); }
+.casc-lib-btn.fin { border-color:var(--green-b); color:var(--green); background:var(--green-bg); }
+
+/* delta */
+.delta-sess-list { display:flex; flex-direction:column; gap:8px; }
+.delta-sess-item { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border2); border-radius:8px; padding:9px 12px; cursor:pointer; transition:all .2s; font-size:12px; }
+.delta-sess-item:hover { border-color:var(--acc-b); }
+.delta-sess-item.on { border-color:var(--acc); background:var(--acc-bg); }
+.delta-scope-panel { background:var(--gold-bg); border:1px solid var(--gold-b); border-radius:10px; padding:12px 14px; margin:10px 0; }
+.delta-scope-title { font-size:11px; font-weight:700; color:var(--gold); margin-bottom:8px; }
+.delta-scope-node { display:flex; gap:8px; align-items:center; padding:5px 8px; border-radius:6px; background:rgba(255,184,0,.05); margin-bottom:4px; font-size:11px; color:var(--text2); }
+.delta-scope-node-id { font-family:'DM Mono',monospace; font-size:10px; color:var(--gold); background:rgba(255,184,0,.1); border-radius:4px; padding:2px 5px; }
+
+/* ── GROUNDING GRAPH ── */
+.grnd-graph-wrap { height:480px; border:1px solid var(--border2); border-radius:12px; background:var(--surface); position:relative; overflow:hidden; margin:14px 0; }
+.grnd-graph-wrap.fullscreen { position:fixed; inset:0; z-index:9000; border-radius:0; height:100vh; }
+#grndGraphCy { width:100%; height:100%; }
+.grnd-ctrl { position:absolute; top:10px; right:10px; z-index:10; display:flex; gap:6px; }
+.grnd-ctrl button { background:rgba(15,15,20,.8); border:1px solid var(--border2); color:var(--text2); border-radius:7px; padding:5px 10px; font-size:11px; cursor:pointer; transition:all .2s; backdrop-filter:blur(6px); }
+.grnd-ctrl button:hover { border-color:var(--acc-b); color:var(--acc-l); }
+.grnd-legend { position:absolute; bottom:10px; left:10px; z-index:10; display:flex; flex-direction:column; gap:4px; }
+.grnd-legend-item { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text2); }
+.grnd-legend-dot { width:10px; height:10px; border-radius:50%; }
+
+.grnd-drawer { position:fixed; right:0; top:0; bottom:0; width:340px; background:var(--surface); border-left:1px solid var(--border2); z-index:9500; transform:translateX(100%); transition:transform .3s; display:flex; flex-direction:column; }
+.grnd-drawer.open { transform:translateX(0); }
+.grnd-drawer-head { padding:14px 16px; border-bottom:1px solid var(--border2); display:flex; align-items:center; gap:10px; }
+.grnd-drawer-title { font-size:14px; font-weight:700; color:var(--text); flex:1; }
+.grnd-drawer-close { background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:4px 8px; border-radius:6px; }
+.grnd-drawer-close:hover { background:var(--red-bg); color:var(--red); }
+.grnd-drawer-body { flex:1; overflow-y:auto; padding:16px; }
+.grnd-node-phase-badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:10px; font-weight:700; margin-bottom:12px; }
+.grnd-file-card { background:var(--surface2); border:1px solid var(--border2); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+.grnd-file-name { font-size:13px; font-weight:600; color:var(--text); margin-bottom:4px; }
+.grnd-file-meta { font-size:11px; color:var(--muted); margin-bottom:10px; }
+.grnd-file-actions { display:flex; gap:8px; }
+.grnd-upload-zone { border:2px dashed var(--border2); border-radius:10px; padding:20px; text-align:center; cursor:pointer; transition:all .2s; }
+.grnd-upload-zone:hover, .grnd-upload-zone.drag { border-color:var(--acc-l); background:var(--acc-bg); }
+.grnd-upload-zone-txt { font-size:12px; color:var(--text2); }
+.grnd-linked-title { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin:14px 0 8px; }
+.grnd-linked-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; font-size:11px; background:var(--surface3); border:1px solid var(--border2); color:var(--text2); margin:3px; }
+
+/* ── ADMIN TEMPLATE CONFIG ── */
+.admin-sub-tabs { display:flex; gap:6px; margin-bottom:16px; }
+.admin-sub-tab { padding:7px 16px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:var(--surface2); color:var(--muted); transition:all .2s; border:1px solid var(--border2); }
+.admin-sub-tab.on { background:var(--acc-bg); color:var(--acc-l); border-color:var(--acc-b); }
+.admin-sub-panel { display:none; }
+.admin-sub-panel.on { display:block; }
+.tmpl-list { display:flex; flex-direction:column; gap:6px; }
+.tmpl-item { background:var(--surface2); border:1px solid var(--border2); border-radius:10px; padding:12px 14px; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:10px; }
+.tmpl-item:hover { border-color:var(--acc-b); }
+.tmpl-item.on { border-color:var(--acc); background:var(--acc-bg); }
+.tmpl-item-name { flex:1; font-size:13px; color:var(--text2); }
+.tmpl-item-status { font-size:10px; font-weight:600; padding:2px 7px; border-radius:10px; }
+.tmpl-item-status.has { background:var(--green-bg); color:var(--green); border:1px solid var(--green-b); }
+.tmpl-item-status.empty { background:var(--surface3); color:var(--muted); border:1px solid var(--border3); }
+.tmpl-editor { background:var(--surface); border:1px solid var(--border2); border-radius:12px; padding:16px; margin-top:12px; }
+.tmpl-editor-title { font-size:13px; font-weight:700; color:var(--acc-l); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.save-prompt-btn { padding:9px 20px; font-size:12px; font-weight:700; background:var(--acc); border:1px solid var(--acc-d); color:#fff; border-radius:8px; cursor:pointer; transition:all .2s; }
+.save-prompt-btn:hover { background:var(--acc-d); }
+.save-prompt-btn.save-btn-success { background:var(--green)!important; border-color:var(--green)!important; color:#fff!important; box-shadow:0 4px 14px rgba(0,229,160,.35)!important; }
+.saved-indicator { display:none; align-items:center; gap:6px; font-size:11px; color:var(--green); padding:4px 10px; background:var(--green-bg); border:1px solid var(--green-b); border-radius:6px; }
+.saved-indicator.show { display:flex; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════ TOPBAR ════════════════ -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-brand-logo">✦</div>
+    <div>
+      <div>ProjectZen</div>
+      <div class="topbar-brand-sub">Document Generation Intelligence</div>
+    </div>
+  </div>
+  <div class="topbar-sep"></div>
+  <div class="srv-row">
+    <input id="serverUrl" type="text" value="http://localhost:8000" placeholder="http://localhost:8000" />
+    <button class="srv-ping" onclick="pingServer()">
+      <span class="sdot" id="sdot"></span><span id="slabel">Check</span>
+    </button>
+  </div>
+  <div class="user-row">
+    <label>Username</label>
+    <input id="usernameInput" type="text" value="user" placeholder="your name" />
+  </div>
+</div>
+
+<!-- ════════════════ PAGE ════════════════ -->
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">Powered by Claude AI · ProjectZen</div>
+    <h1 class="hero-title">Generate <em>any document</em>,<br>with enterprise precision.</h1>
+    <p class="hero-sub">Select a Template, describe your project, upload your data — and let Claude build a fully structured, professional document instantly.</p>
+    <div class="hero-badges">
+      <div class="hero-badge">📊 Excel</div>
+      <div class="hero-badge">📝 Word</div>
+      <div class="hero-badge">📕 PDF</div>
+      <div class="hero-badge">🎞️ PowerPoint</div>
+      <div class="hero-badge">🗂️ XML</div>
+      <div class="hero-badge">30+ Templates</div>
+    </div>
+  </div>
+
+  <!-- OUTER TABS: User / Admin -->
+  <div class="outer-tabs">
+    <button class="outer-tab on" id="outerTabUser"  onclick="switchOuter('user')">✦ User — Document Generation</button>
+    <button class="outer-tab"   id="outerTabAdmin" onclick="switchOuter('admin')">⚙ Admin — Document Grounding</button>
+  </div>
+
+  <!-- ══════════════════════ OUTER: USER ══════════════════════ -->
+  <div class="outer-panel on" id="outerPanelUser">
+
+  <!-- TABS -->
+  <div class="main-tabs">
+    <button class="main-tab on" id="tabGenerate" onclick="switchTab('generate')">✦ Generate</button>
+    <button class="main-tab"   id="tabAsk"      onclick="switchTab('ask')">🔍 Ask Library</button>
+    <button class="main-tab"   id="tabCascade"  onclick="switchTab('cascade')">⚡ Cascade Generate</button>
+  </div>
+
+  <!-- ══════════════ TAB: GENERATE ══════════════ -->
+  <div class="tab-panel on" id="panelGenerate">
+
+    <!-- 01 TEMPLATE -->
+    <div class="card" id="outputTypeCard">
+      <div class="card-label">
+        <span class="step-n">01</span>
+        <span class="label-txt">Template</span>
+        <span class="badge badge-req">Required</span>
+      </div>
+      <select id="outputType" onchange="onOutputTypeChange()">
+        <option value="">— Select Template —</option>
+        <optgroup label="Project Management">
+          <option>Project Plan</option>
+          <option>Communication Plan</option>
+          <option>Governance Matrix</option>
+          <option>Weekly Status Report</option>
+          <option>Steering Committee Status Report</option>
+        </optgroup>
+        <optgroup label="Risk &amp; Issues">
+          <option>Risk/Issue Log</option>
+        </optgroup>
+        <optgroup label="Onboarding &amp; Milestones">
+          <option>Onboarding PPT</option>
+          <option>Milestone Signoff Format</option>
+        </optgroup>
+        <optgroup label="SAP / Functional">
+          <option>RTM</option>
+          <option>To-Be Process</option>
+          <option>Fit-Gap</option>
+          <option>Solution Design</option>
+          <option>Interface List</option>
+          <option>Integration Strategy</option>
+          <option>Data Migration Strategy</option>
+          <option>Functional Spec Document</option>
+          <option>Config Specs</option>
+          <option>Integration TD</option>
+        </optgroup>
+        <optgroup label="Data Models">
+          <option>Data model (XML) → Workbook</option>
+          <option>Workbook → Data model (XML)</option>
+          <option>Data model CSF (XML) → Workbook</option>
+          <option>Workbook → Data model CSF (XML)</option>
+        </optgroup>
+        <optgroup label="Testing">
+          <option>Unit Test Case</option>
+          <option>Test Strategy</option>
+          <option>Test Cases</option>
+          <option>Defect Log</option>
+          <option>Integration Test Case</option>
+          <option>UAT Test Case</option>
+        </optgroup>
+        <optgroup label="Go-Live &amp; Hypercare">
+          <option>Cutover Plan</option>
+          <option>Go-Live Checklist</option>
+          <option>Hypercare Tracker</option>
+        </optgroup>
+        <optgroup label="Knowledge Transfer">
+          <option>Train the Trainer Plan</option>
+          <option>KT Plan</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <!-- 02 USER PROMPT -->
+    <div class="card" id="userPromptCard" style="display:none">
+      <div class="card-label">
+        <span class="step-n">02</span>
+        <span class="label-txt">User Prompt / Personalization</span>
+        <span class="badge badge-opt">Optional</span>
+      </div>
+      <textarea id="userPrompt" placeholder="Add your project details and custom instructions…
+
+Examples:
+• Project name: SAP SuccessFactors rollout for Microsoft EMEA
+• Focus on Q3 2025 milestones and resource plan
+• Include risk owners from the PMO team
+• Use Accenture delivery framework structure"></textarea>
+    </div>
+
+    <!-- 03 INPUT FILE -->
+    <div class="card" id="inputFileCard" style="display:none">
+      <div class="card-label">
+        <span class="step-n">03</span>
+        <span class="label-txt">Input File — Content &amp; Data</span>
+        <span class="badge badge-opt">Optional</span>
+      </div>
+      <div class="drop-zone" id="dz-input"
+           onclick="document.getElementById('fi-input').click()"
+           ondragover="onDragOver(event,'dz-input')" ondragleave="onDragLeave('dz-input')"
+           ondrop="onDropInput(event)">
+        <span class="dz-icon" id="icon-input">📂</span>
+        <div class="dz-title" id="title-input">Drop your file here or click to browse</div>
+        <div class="dz-sub"   id="sub-input">Claude reads this as source content and data for generation</div>
+        <div class="type-chips">
+          <span class="chip doc">docx</span><span class="chip xl">xlsx</span><span class="chip xl">csv</span>
+          <span class="chip ppt">pptx</span><span class="chip pdf">pdf</span>
+          <span class="chip txt">txt</span><span class="chip txt">md</span>
+          <span class="chip dat">json</span><span class="chip dat">xml</span>
+        </div>
+      </div>
+      <input type="file" id="fi-input" accept=".xlsx,.xls,.csv,.txt,.md,.json,.docx,.doc,.pdf,.pptx,.ppt,.xml" onchange="handleInputFile(this.files[0])" />
+      <div class="file-chip green" id="chip-input">
+        <span class="fc-ico" id="chipico-input">📄</span>
+        <div class="fc-info">
+          <div class="fc-name" id="chipname-input">—</div>
+          <div class="fc-meta" id="chipmeta-input">—</div>
+        </div>
+        <button class="fc-rm" onclick="removeInputFile(event)">✕</button>
+      </div>
+    </div>
+
+    <!-- 04 REFERENCE FILE -->
+    <div class="card" id="userRefCard" style="display:none">
+      <div class="card-label">
+        <span class="step-n">04</span>
+        <span class="label-txt">Reference File — Style &amp; Structure</span>
+        <span class="badge badge-opt">Optional</span>
+      </div>
+      <label class="toggle-row" for="userRefToggle">
+        <div class="toggle-switch">
+          <input type="checkbox" id="userRefToggle" onchange="onUserRefToggle()" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </div>
+        <div class="toggle-label-wrap">
+          <div class="toggle-label-main">Use a Reference File</div>
+          <div class="toggle-label-sub">Claude will mirror its structure, layout, tone and design in the output</div>
+        </div>
+      </label>
+      <div class="user-ref-zone" id="userRefZone">
+        <div class="ref-info">
+          <span style="font-size:14px;flex-shrink:0">📎</span>
+          <span><strong>Your reference file takes priority.</strong> Claude will mirror its style — structure, layout, tone, and design — in the generated document.</span>
+        </div>
+        <div class="drop-zone ref-zone" id="dz-user-ref"
+             onclick="document.getElementById('fi-user-ref').click()"
+             ondragover="onDragOver(event,'dz-user-ref')" ondragleave="onDragLeave('dz-user-ref')"
+             ondrop="onDropUserRef(event)">
+          <span class="dz-icon" id="icon-user-ref">📂</span>
+          <div class="dz-title" id="title-user-ref">Upload your reference file</div>
+          <div class="dz-sub"   id="sub-user-ref">Output will follow its structure, design and tone</div>
+          <div class="type-chips">
+            <span class="chip doc">docx</span><span class="chip xl">xlsx</span><span class="chip xl">csv</span>
+            <span class="chip ppt">pptx</span><span class="chip pdf">pdf</span>
+            <span class="chip txt">txt</span><span class="chip txt">md</span><span class="chip dat">json</span>
+          </div>
+        </div>
+        <input type="file" id="fi-user-ref" accept=".xlsx,.xls,.csv,.txt,.md,.json,.docx,.doc,.pdf,.pptx,.ppt,.xml" onchange="handleUserRefFile(this.files[0])" />
+        <div class="file-chip purple" id="chip-user-ref">
+          <span class="fc-ico" id="chipico-user-ref">📄</span>
+          <div class="fc-info">
+            <div class="fc-name" id="chipname-user-ref">—</div>
+            <div class="fc-meta" id="chipmeta-user-ref">—</div>
+          </div>
+          <button class="fc-rm" onclick="removeUserRefFile(event)">✕</button>
+        </div>
+        <div class="mirror-grid" id="mirrorGrid">
+          <label class="mirror-item"><input type="checkbox" id="mir-structure" checked> Structure</label>
+          <label class="mirror-item"><input type="checkbox" id="mir-tone"      checked> Tone &amp; voice</label>
+          <label class="mirror-item"><input type="checkbox" id="mir-style"     checked> Style &amp; design</label>
+          <label class="mirror-item"><input type="checkbox" id="mir-layout"    checked> Layout</label>
+          <label class="mirror-item"><input type="checkbox" id="mir-patterns"  checked> Patterns</label>
+          <label class="mirror-item"><input type="checkbox" id="mir-format"    checked> Formatting</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 05 OUTPUT FILENAME -->
+    <div class="card" id="outputFilenameCard" style="display:none">
+      <div class="card-label">
+        <span class="step-n">05</span>
+        <span class="label-txt">Output Filename</span>
+      </div>
+      <input type="text" id="fileName" value="my-document" placeholder="Output filename (no extension)" />
+    </div>
+
+    <!-- 06 OUTPUT FORMAT -->
+    <div class="card" id="outputFormatCard" style="display:none">
+      <div class="card-label">
+        <span class="step-n">06</span>
+        <span class="label-txt">Output Format</span>
+      </div>
+      <div class="fmt-grid">
+        <button class="fmt-btn on" data-fmt="xlsx" onclick="selFmt(this)">
+          <span class="fmt-ico">📊</span><span class="fmt-name">Excel</span><span class="fmt-desc">Spreadsheets &amp; data</span>
+        </button>
+        <button class="fmt-btn" data-fmt="docx" onclick="selFmt(this)">
+          <span class="fmt-ico">📝</span><span class="fmt-name">Word</span><span class="fmt-desc">Documents &amp; reports</span>
+        </button>
+        <button class="fmt-btn" data-fmt="pdf" onclick="selFmt(this)">
+          <span class="fmt-ico">📕</span><span class="fmt-name">PDF</span><span class="fmt-desc">Polished reports</span>
+        </button>
+        <button class="fmt-btn" data-fmt="pptx" onclick="selFmt(this)">
+          <span class="fmt-ico">🎞️</span><span class="fmt-name">PowerPoint</span><span class="fmt-desc">Slides &amp; decks</span>
+        </button>
+        <button class="fmt-btn" data-fmt="xml" onclick="selFmt(this)">
+          <span class="fmt-ico">🗂️</span><span class="fmt-name">XML</span><span class="fmt-desc">Data model export</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- CONVERSATION MEMORY TOAST -->
+    <div class="meta-toast" id="metaToast">
+      <span class="meta-toast-icon">↺</span>
+      <div class="meta-toast-body">
+        <div class="meta-toast-title">
+          <span class="meta-live-dot"></span> Meta-Prompting Active
+        </div>
+        <div class="meta-toast-desc" id="metaToastDesc">
+          Claude now has memory of your previous generation. Click <strong>↺ Refine / Continue</strong> to extend, modify or build upon what was already created.
+        </div>
+      </div>
+      <div class="meta-toast-turn" id="metaToastTurn">Turn 1 done</div>
+    </div>
+
+    <!-- ASSISTANT PROMPT CARD -->
+    <div class="card asst-card" id="asstPromptCard">
+      <div class="card-label">
+        <span class="step-n" style="background:var(--teal-bg);border-color:var(--teal-b);color:var(--teal)">↺</span>
+        <span class="label-txt" style="color:var(--teal)">Conversation Memory</span>
+        <span class="badge" style="background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-b)">Auto</span>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--text2);line-height:1.7;max-height:120px;overflow-y:auto;font-family:'DM Mono',monospace;white-space:pre-wrap;opacity:.85" id="asstPromptPreview"></div>
+    </div>
+
+    <!-- GENERATE BUTTONS -->
+    <div class="gen-btn-row" id="genBtnRow" style="display:none">
+      <button class="gen-btn" id="genBtn" onclick="generate(false)">
+        ✦ &nbsp;Generate with Claude Agent
+      </button>
+      <button class="refine-btn" id="refineBtn" onclick="generate(true)">
+        ↺ &nbsp;Refine / Continue
+      </button>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="prog-card" id="progCard">
+      <div class="prog-title">Generation Progress</div>
+      <div class="steps">
+        <div class="step" id="p1"><div class="step-dot"></div><div class="step-txt">Reading &amp; encoding files</div><div class="step-time" id="t1"></div></div>
+        <div class="step" id="p2"><div class="step-dot"></div><div class="step-txt">Sending to Claude AI</div><div class="step-time" id="t2"></div></div>
+        <div class="step" id="p3"><div class="step-dot"></div><div class="step-txt">Claude building content plan</div><div class="step-time" id="t3"></div></div>
+        <div class="step" id="p4"><div class="step-dot"></div><div class="step-txt">Building output file</div><div class="step-time" id="t4"></div></div>
+        <div class="step" id="p5"><div class="step-dot"></div><div class="step-txt">Ready to download</div><div class="step-time" id="t5"></div></div>
+      </div>
+      <div class="err-box" id="errBox"></div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="result-card" id="resultCard">
+      <div class="r-name" id="rName"></div>
+      <div class="r-meta" id="rMeta"></div>
+      <div class="r-preview" id="rPreview"></div>
+      <a class="dl-btn" id="dlBtn" href="#">↓ Download File</a>
+    </div>
+
+    <!-- CONVERSATION HISTORY -->
+    <div class="conv-panel" id="convPanel">
+      <div class="conv-header" onclick="toggleConvPanel()">
+        <span class="conv-header-lbl">// Conversation History</span>
+        <span class="conv-turn-count" id="convTurnCount">0 turns</span>
+        <button class="conv-clear-btn" onclick="clearHistory(event)">✕ Clear</button>
+        <span class="conv-chevron" id="convChevron">▼</span>
+      </div>
+      <div class="conv-body" id="convBody">
+        <div id="convTurnList"></div>
+      </div>
+    </div>
+
+    <!-- DOCUMENT LIBRARY -->
+    <div class="library-panel" id="libraryPanel">
+      <div class="library-header" onclick="toggleLibrary()">
+        <span class="library-header-lbl">📚 Document Library</span>
+        <span class="library-count" id="libCount">0 files</span>
+        <button class="library-refresh" onclick="loadLibrary(event)" title="Refresh">↺</button>
+        <span class="library-chevron" id="libChevron">▼</span>
+      </div>
+      <div class="library-body" id="libraryBody">
+        <div class="lib-filters">
+          <input class="lib-filter-inp" id="libSearch" placeholder="Filter by filename or template…" oninput="filterLibrary()" />
+          <select class="lib-format-sel" id="libFormat" onchange="filterLibrary()">
+            <option value="">All formats</option>
+            <option value="xlsx">Excel</option>
+            <option value="docx">Word</option>
+            <option value="pdf">PDF</option>
+            <option value="pptx">PowerPoint</option>
+            <option value="xml">XML</option>
+          </select>
+        </div>
+        <div id="libTableWrap">
+          <div class="lib-empty">No documents yet — generate your first file above.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panelGenerate -->
+
+  <!-- ══════════════ TAB: ASK LIBRARY ══════════════ -->
+  <div class="tab-panel" id="panelAsk">
+    <div class="card">
+      <div class="card-label">
+        <span class="step-n">🔍</span>
+        <span class="label-txt">Ask the Document Library</span>
+        <span class="badge" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid #4f46e5">Agentic</span>
+      </div>
+      <div class="ask-wrap">
+        <div class="ask-examples" id="askExamples">
+          <button class="ask-example" onclick="setAskExample(this)">All documents for my project</button>
+          <button class="ask-example" onclick="setAskExample(this)">Latest Excel file in the library</button>
+          <button class="ask-example" onclick="setAskExample(this)">Summarise the risk register I generated</button>
+          <button class="ask-example" onclick="setAskExample(this)">Show all XML files created this week</button>
+          <button class="ask-example" onclick="setAskExample(this)">Find documents about SAP job classifications</button>
+        </div>
+        <div class="ask-input-row">
+          <textarea class="ask-textarea" id="askInput"
+            placeholder="Ask anything about your document library…&#10;e.g. 'Find all project plan documents' or 'Summarise the risk register I made yesterday'"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();askLibrary();}"></textarea>
+          <button class="ask-btn" id="askBtn" onclick="askLibrary()">Ask</button>
+        </div>
+        <div class="ask-results empty" id="askResults">Your answer will appear here — grounded only in your document library.</div>
+        <div class="ask-doc-links" id="askDocLinks" style="display:none"></div>
+        <div class="ask-meta" id="askMeta"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB: CASCADE GENERATE ══════════════ -->
+  <div class="tab-panel" id="panelCascade">
+
+    <!-- Mode selector -->
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-label">
+        <span class="step-n" style="background:var(--acc-bg);border-color:var(--acc-b);color:var(--acc-l)">01</span>
+        <span class="label-txt" style="color:var(--acc-l)">Generation Mode</span>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="casc-mode-btn on" id="cascModeNew" onclick="setCascMode('new')">
+          <span style="font-size:16px">✦</span><span>New Generation</span>
+          <small style="display:block;font-size:10px;color:var(--muted);font-weight:400;margin-top:2px">Generate all documents from a source file</small>
+        </button>
+        <button class="casc-mode-btn" id="cascModeDelta" onclick="setCascMode('delta')">
+          <span style="font-size:16px">⚡</span><span>Delta Update</span>
+          <small style="display:block;font-size:10px;color:var(--muted);font-weight:400;margin-top:2px">Update existing documents with a change</small>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── NEW MODE ── -->
+    <div id="cascNewSection">
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-label">
+          <span class="step-n" style="background:var(--acc-bg);border-color:var(--acc-b);color:var(--acc-l)">02</span>
+          <span class="label-txt" style="color:var(--acc-l)">Upload Source Document</span>
+          <span class="badge badge-req">Required</span>
+        </div>
+        <div class="drop-zone" id="cascDZ"
+             onclick="document.getElementById('cascFileIn').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="cascDrop(event)">
+          <span class="dz-icon">📄</span>
+          <div class="dz-title">Drop SOW, Project Plan, or any source document</div>
+          <div class="dz-sub">DOCX · PDF · XLSX · TXT — max 10 MB</div>
+          <div id="cascFileChosen" style="margin-top:8px;font-size:12px;color:var(--green);font-weight:600"></div>
+        </div>
+        <input type="file" id="cascFileIn" accept=".docx,.doc,.pdf,.xlsx,.xls,.txt,.csv,.md" onchange="cascFileSelect(this)">
+      </div>
+
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-label">
+          <span class="step-n" style="background:var(--acc-bg);border-color:var(--acc-b);color:var(--acc-l)">03</span>
+          <span class="label-txt" style="color:var(--acc-l)">Select Documents to Generate</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <button class="casc-sel-btn" onclick="cascSelectAll()">Select All</button>
+          <button class="casc-sel-btn" onclick="cascClearAll()">Clear All</button>
+          <button class="casc-sel-btn" onclick="cascSelectPhase('Initiate')">Initiate</button>
+          <button class="casc-sel-btn" onclick="cascSelectPhase('Confirm')">Confirm</button>
+          <button class="casc-sel-btn" onclick="cascSelectPhase('Design-Build')">Design-Build</button>
+          <button class="casc-sel-btn" onclick="cascSelectPhase('Integrate')">Integrate</button>
+          <button class="casc-sel-btn" onclick="cascSelectPhase('Deploy')">Deploy</button>
+        </div>
+        <div class="casc-doc-grid" id="cascDocGrid"></div>
+      </div>
+
+      <button class="casc-launch-btn" id="cascLaunchBtn" onclick="cascLaunch()">⚡ Generate Selected Documents</button>
+    </div>
+
+    <!-- ── DELTA MODE ── -->
+    <div id="cascDeltaSection" style="display:none">
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-label">
+          <span class="step-n" style="background:var(--gold-bg);border-color:var(--gold-b);color:var(--gold)">02</span>
+          <span class="label-txt" style="color:var(--gold)">Select Source Session</span>
+        </div>
+        <div class="delta-sess-list" id="deltaSessList">
+          <div style="color:var(--muted);font-size:12px">Loading sessions…</div>
+        </div>
+      </div>
+
+      <div class="card" id="deltaChangeCard" style="margin-bottom:10px;display:none">
+        <div class="card-label">
+          <span class="step-n" style="background:var(--gold-bg);border-color:var(--gold-b);color:var(--gold)">03</span>
+          <span class="label-txt" style="color:var(--gold)">Describe or Upload Change</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="casc-sel-btn" id="dtypePromptBtn" onclick="setDeltaType('prompt')" style="border-color:var(--gold-b);color:var(--gold)">📝 Prompt</button>
+          <button class="casc-sel-btn" id="dtypeFileBtn"   onclick="setDeltaType('file')">📄 File</button>
+        </div>
+        <textarea id="deltaPromptInp" placeholder="Describe what changed — e.g. 'Project go-live moved from Dec to March. Update all impacted timelines.'" style="height:80px"></textarea>
+        <div id="deltaFileZone" style="display:none">
+          <div class="drop-zone" style="margin-top:8px" onclick="document.getElementById('deltaFileIn').click()"
+               ondragover="event.preventDefault();this.classList.add('drag')"
+               ondragleave="this.classList.remove('drag')"
+               ondrop="event.preventDefault();cascDeltaFileSet(event.dataTransfer.files[0])">
+            <span class="dz-icon">📄</span>
+            <div class="dz-title">Drop new source file</div>
+            <div id="deltaFileChosen" style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600"></div>
+          </div>
+          <input type="file" id="deltaFileIn" accept=".docx,.doc,.pdf,.xlsx,.xls,.txt,.csv,.md" onchange="cascDeltaFileSet(this.files[0])">
+        </div>
+        <button class="casc-launch-btn" style="margin-top:10px;background:linear-gradient(135deg,var(--gold),#c87800)" id="deltaAnalyseBtn" onclick="deltaAnalyse()">⚡ Analyse Impact</button>
+      </div>
+
+      <!-- delta scope -->
+      <div id="deltaScopePanel" style="display:none"></div>
+
+      <button class="casc-launch-btn" id="deltaRunBtn" style="display:none;background:linear-gradient(135deg,var(--gold),#c87800)" onclick="cascLaunchDelta()">⚡ Run Delta Cascade</button>
+    </div>
+
+    <!-- CASCADE PROGRESS (shared new + delta) -->
+    <div class="casc-progress" id="cascProgress" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="casc-wave-title" id="cascWaveTitle">Cascade in progress…</div>
+        <div style="font-size:11px;color:var(--muted)" id="cascProgLabel">0 / 0</div>
+      </div>
+      <div class="casc-prog-bar-wrap"><div class="casc-prog-bar" id="cascProgBar"></div></div>
+      <!-- cytoscape progress graph -->
+      <div class="casc-graph-wrap" id="cascGraphWrap" style="display:none">
+        <div class="casc-graph-ctrl">
+          <button onclick="if(_cascCyInstance)_cascCyInstance.fit()">Fit</button>
+          <button onclick="if(_cascCyInstance)_cascCyInstance.zoom(_cascCyInstance.zoom()*1.3)">+</button>
+          <button onclick="if(_cascCyInstance)_cascCyInstance.zoom(_cascCyInstance.zoom()*.77)">−</button>
+        </div>
+        <div id="cascGraphCy"></div>
+      </div>
+      <div class="casc-items" id="cascItems" style="max-height:200px;overflow-y:auto"></div>
+    </div>
+
+    <!-- POST-GENERATION: download graph + table -->
+    <div id="cascPostSection" style="display:none">
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-label">
+          <span class="step-n" style="background:var(--green-bg);border-color:var(--green-b);color:var(--green)">✓</span>
+          <span class="label-txt" style="color:var(--green)">Generation Complete</span>
+          <button class="casc-sel-btn" onclick="cascDownloadAll()" style="margin-left:auto;border-color:var(--green-b);color:var(--green)">↓ Download All</button>
+          <button class="casc-sel-btn" onclick="cascTriggerDelta()" style="border-color:var(--gold-b);color:var(--gold)">⚡ Delta Update</button>
+        </div>
+        <!-- download cytoscape graph -->
+        <div class="casc-dl-graph-wrap">
+          <div id="cascDlGraphCy"></div>
+        </div>
+        <!-- lib table -->
+        <div id="cascLibTableWrap" style="overflow-x:auto"></div>
+      </div>
+    </div>
+
+  </div><!-- /panelCascade -->
+
+  </div><!-- /outerPanelUser -->
+
+  <!-- ══════════════════════ OUTER: ADMIN ══════════════════════ -->
+  <div class="outer-panel" id="outerPanelAdmin">
+
+    <!-- ADMIN SUB-TABS -->
+    <div class="admin-sub-tabs">
+      <button class="admin-sub-tab on" id="adminTabTmpl"   onclick="switchAdminTab('tmpl')">⚙ Template Config</button>
+      <button class="admin-sub-tab"   id="adminTabGround" onclick="switchAdminTab('ground')">🔗 Document Grounding</button>
+    </div>
+
+    <!-- ── Template Config ── -->
+    <div class="admin-sub-panel on" id="adminPanelTmpl">
+      <div class="card">
+        <div class="card-label">
+          <span class="step-n" style="background:var(--acc-bg);border-color:var(--acc-b);color:var(--acc-l)">⚙</span>
+          <span class="label-txt">System Prompt &amp; Reference File per Template</span>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Select a template to edit its admin system prompt and reference file. Saved settings are used automatically when users generate with that template.</p>
+
+        <select id="adminTmplSelect" onchange="adminLoadTemplate()" style="margin-bottom:14px">
+          <option value="">— Select Template —</option>
+          <optgroup label="Project Management">
+            <option>Project Plan</option><option>Communication Plan</option>
+            <option>Governance Matrix</option><option>Weekly Status Report</option>
+            <option>Steering Committee Status Report</option>
+          </optgroup>
+          <optgroup label="Risk &amp; Issues"><option>Risk/Issue Log</option></optgroup>
+          <optgroup label="Onboarding &amp; Milestones">
+            <option>Onboarding PPT</option><option>Milestone Signoff Format</option>
+          </optgroup>
+          <optgroup label="SAP / Functional">
+            <option>RTM</option><option>To-Be Process</option><option>Fit-Gap</option>
+            <option>Solution Design</option><option>Interface List</option>
+            <option>Integration Strategy</option><option>Data Migration Strategy</option>
+            <option>Functional Spec Document</option><option>Config Specs</option><option>Integration TD</option>
+          </optgroup>
+          <optgroup label="Data Models">
+            <option>Data model (XML) → Workbook</option><option>Workbook → Data model (XML)</option>
+            <option>Data model CSF (XML) → Workbook</option><option>Workbook → Data model CSF (XML)</option>
+          </optgroup>
+          <optgroup label="Testing">
+            <option>Unit Test Case</option><option>Test Strategy</option><option>Test Cases</option>
+            <option>Defect Log</option><option>Integration Test Case</option><option>UAT Test Case</option>
+          </optgroup>
+          <optgroup label="Go-Live &amp; Hypercare">
+            <option>Cutover Plan</option><option>Go-Live Checklist</option><option>Hypercare Tracker</option>
+          </optgroup>
+          <optgroup label="Knowledge Transfer">
+            <option>Train the Trainer Plan</option><option>KT Plan</option>
+          </optgroup>
+        </select>
+
+        <div class="tmpl-editor" id="tmplEditor" style="display:none">
+          <div class="tmpl-editor-title">
+            <span>✦</span><span id="tmplEditorName">Template</span>
+          </div>
+
+          <div style="margin-bottom:10px">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">System Prompt</div>
+            <textarea id="tmplSystemPrompt" placeholder="Enter admin system prompt for this template…" style="height:120px;font-family:'DM Mono',monospace;font-size:12px"></textarea>
+          </div>
+
+          <div style="margin-bottom:14px">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Reference File</div>
+            <div class="drop-zone" id="tmplRefDZ"
+                 onclick="document.getElementById('tmplRefIn').click()"
+                 ondragover="event.preventDefault();this.classList.add('drag')"
+                 ondragleave="this.classList.remove('drag')"
+                 ondrop="event.preventDefault();tmplRefSet(event.dataTransfer.files[0])">
+              <span class="dz-icon">📎</span>
+              <div class="dz-title">Drop reference file or click to browse</div>
+              <div id="tmplRefChosen" style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600"></div>
+            </div>
+            <input type="file" id="tmplRefIn" onchange="tmplRefSet(this.files[0])">
+            <div class="ref-info" id="tmplExistingRef" style="display:none;margin-top:8px">
+              <span>📎</span><span id="tmplExistingRefTxt"></span>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="save-prompt-btn" id="tmplSaveBtn" onclick="adminSaveTemplate()">💾 Save Template</button>
+            <div class="saved-indicator" id="tmplSavedIndicator">✓ Saved</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Document Grounding ── -->
+    <div class="admin-sub-panel" id="adminPanelGround">
+      <div class="card">
+        <div class="card-label">
+          <span class="step-n" style="background:var(--teal-bg);border-color:var(--teal-b);color:var(--teal)">🔗</span>
+          <span class="label-txt">Document Grounding — Knowledge Graph</span>
+          <button class="casc-sel-btn" style="margin-left:auto" onclick="groundingInit()">↺ Refresh</button>
+          <button class="casc-sel-btn" onclick="groundingToggleFullscreen()">⛶ Fullscreen</button>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Click any node to open its reference file drawer. Upload or delete grounding files used during cascade generation.</p>
+
+        <!-- grounding graph -->
+        <div class="grnd-graph-wrap" id="grndGraphWrap">
+          <div class="grnd-ctrl">
+            <button onclick="if(_grndCy)_grndCy.fit()">Fit</button>
+            <button onclick="if(_grndCy)_grndCy.zoom(_grndCy.zoom()*1.3)">+</button>
+            <button onclick="if(_grndCy)_grndCy.zoom(_grndCy.zoom()*.77)">−</button>
+          </div>
+          <div id="grndGraphCy"></div>
+          <!-- legend -->
+          <div class="grnd-legend">
+            <div class="grnd-legend-item"><div class="grnd-legend-dot" style="background:#85b7eb"></div> Initiate</div>
+            <div class="grnd-legend-item"><div class="grnd-legend-dot" style="background:#afa9ec"></div> Confirm</div>
+            <div class="grnd-legend-item"><div class="grnd-legend-dot" style="background:#ef9f27"></div> Design-Build</div>
+            <div class="grnd-legend-item"><div class="grnd-legend-dot" style="background:#f0997b"></div> Integrate</div>
+            <div class="grnd-legend-item"><div class="grnd-legend-dot" style="background:#97c459"></div> Deploy</div>
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center">
+          <span id="grndStatusSummary">Loading…</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /outerPanelAdmin -->
+
+</div><!-- /page -->
+
+<!-- Grounding node drawer (fixed overlay) -->
+<div class="grnd-drawer" id="grndDrawer">
+  <div class="grnd-drawer-head">
+    <div class="grnd-drawer-title" id="grndDrawerTitle">Node</div>
+    <button class="grnd-drawer-close" onclick="grndCloseDrawer()">✕</button>
+  </div>
+  <div class="grnd-drawer-body" id="grndDrawerBody">
+    <div id="grndDrawerPhaseBadge"></div>
+    <!-- Multi-slot area — rendered only for config-workbook node -->
+    <div id="grndWorkbookSlots"></div>
+    <!-- Standard single-file area — all other nodes -->
+    <div id="grndFileCard" class="grnd-file-card" style="display:none">
+      <div class="grnd-file-name" id="grndFileName"></div>
+      <div class="grnd-file-meta" id="grndFileMeta"></div>
+      <div class="grnd-file-actions">
+        <a class="casc-lib-btn" id="grndFileDownload" href="#" download>↓ Download</a>
+        <button class="casc-lib-btn" style="border-color:var(--red-b);color:var(--red)" onclick="groundingDelete()">🗑 Delete</button>
+      </div>
+    </div>
+    <div id="grndNoFileCard" style="display:none">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">No reference file attached to this node.</div>
+    </div>
+    <div class="grnd-upload-zone" id="grndUploadZone"
+         onclick="document.getElementById('grndFileIn').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="event.preventDefault();groundingHandleFile(event.dataTransfer.files[0])">
+      <div class="grnd-upload-zone-txt">📎 Drop or click to upload reference file</div>
+      <div id="grndUploadLabel" style="font-size:11px;color:var(--green);margin-top:4px;font-weight:600"></div>
+    </div>
+    <input type="file" id="grndFileIn" onchange="groundingHandleFile(this.files[0])">
+    <div class="grnd-linked-title" id="grndLinkedTitle">Linked Nodes</div>
+    <div id="grndLinkedList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════════
+const CONFIG_KEY = 'claudeAgent_configs';
+const FILE_ICONS = { xlsx:'📊',xls:'📊',csv:'📊',docx:'📝',doc:'📝',pdf:'📕',pptx:'🎞️',ppt:'🎞️',txt:'📃',md:'📃',json:'🗂️',xml:'🗂️' };
+const MIME_MAP   = { xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',xls:'application/vnd.ms-excel',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',doc:'application/msword',pdf:'application/pdf',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',ppt:'application/vnd.ms-powerpoint',xml:'application/xml' };
+
+const CASCADE_DOCS = [
+  // ── Initiate ─────────────────────────────────────────────────
+  { id:'sow',                  label:'SOW / SP51',                   phase:'Initiate' },
+  { id:'project_plan',         label:'Project Plan',                 phase:'Initiate' },
+  { id:'communication_plan',   label:'Communication Plan',           phase:'Initiate' },
+  { id:'governance_matrix',    label:'Governance Matrix',            phase:'Initiate' },
+  { id:'risk_log',             label:'Risk/Issue Log',               phase:'Initiate' },
+  // ── Confirm ──────────────────────────────────────────────────
+  { id:'rtm',                  label:'RTM',                          phase:'Confirm' },
+  { id:'fitgap',               label:'Fit-Gap',                      phase:'Confirm' },
+  { id:'to_be_process',        label:'To-Be Process',                phase:'Confirm' },
+  // ── Design-Build ─────────────────────────────────────────────
+  { id:'solution_design',      label:'Solution Design',              phase:'Design-Build' },
+  { id:'functional_spec',      label:'Functional Spec Document',     phase:'Design-Build' },
+  { id:'config-workbook',      label:'Configuration Workbook',       phase:'Design-Build' },
+  { id:'interface_list',       label:'Interface List',               phase:'Design-Build' },
+  { id:'integration_strategy', label:'Integration Strategy',         phase:'Design-Build' },
+  { id:'data_migration',       label:'Data Migration Strategy',      phase:'Design-Build' },
+  { id:'config_specs',         label:'Config Specs',                 phase:'Design-Build' },
+  { id:'integration_td',       label:'Integration TD',               phase:'Design-Build' },
+  // ── Integrate ────────────────────────────────────────────────
+  { id:'unit_test',            label:'Unit Test Case',               phase:'Integrate' },
+  { id:'test_strategy',        label:'Test Strategy',                phase:'Integrate' },
+  { id:'test_cases',           label:'Test Cases',                   phase:'Integrate' },
+  { id:'defect_log',           label:'Defect Log',                   phase:'Integrate' },
+  { id:'integration_test',     label:'Integration Test Case',        phase:'Integrate' },
+  { id:'uat_test',             label:'UAT Test Case',                phase:'Integrate' },
+  // ── Deploy ───────────────────────────────────────────────────
+  { id:'cutover_plan',         label:'Cutover Plan',                 phase:'Deploy' },
+  { id:'golive_checklist',     label:'Go-Live Checklist',            phase:'Deploy' },
+  { id:'hypercare_tracker',    label:'Hypercare Tracker',            phase:'Deploy' },
+  { id:'weekly_status',        label:'Weekly Status Report',         phase:'Deploy' },
+  { id:'steerco_report',       label:'Steering Committee Report',    phase:'Deploy' },
+  { id:'train_trainer',        label:'Train the Trainer Plan',       phase:'Deploy' },
+  { id:'kt_plan',              label:'KT Plan',                      phase:'Deploy' },
+];
+
+// ── Document dependency edges (mirrors knowledge_graph.py EDGES) ──────────────
+const CASCADE_EDGES = [
+  // SOW → downstream
+  {source:'sow', target:'project_plan'},
+  {source:'sow', target:'communication_plan'},
+  {source:'sow', target:'governance_matrix'},
+  {source:'sow', target:'risk_log'},
+  {source:'sow', target:'rtm'},
+  {source:'sow', target:'config-workbook'},       // SOW → Configuration Workbook
+  // Confirm phase flow
+  {source:'project_plan',         target:'rtm'},
+  {source:'fitgap',               target:'rtm'},
+  {source:'rtm',                  target:'fitgap'},
+  {source:'fitgap',               target:'to_be_process'},
+  {source:'fitgap',               target:'solution_design'},
+  {source:'rtm',                  target:'solution_design'},
+  {source:'to_be_process',        target:'solution_design'},
+  // Solution Design → Design-Build
+  {source:'solution_design',      target:'functional_spec'},
+  {source:'solution_design',      target:'config-workbook'},       // Solution Design → Config Workbook
+  {source:'solution_design',      target:'interface_list'},
+  {source:'solution_design',      target:'integration_strategy'},
+  {source:'solution_design',      target:'data_migration'},
+  {source:'solution_design',      target:'integration_td'},
+  // Functional Spec → Config Workbook (and others)
+  {source:'functional_spec',      target:'config-workbook'},       // Func Spec → Config Workbook
+  {source:'functional_spec',      target:'unit_test'},
+  // Config Workbook → downstream
+  {source:'config-workbook',      target:'config_specs'},
+  {source:'config-workbook',      target:'unit_test'},
+  {source:'config-workbook',      target:'kt_plan'},
+  // Interface / Integration
+  {source:'interface_list',       target:'integration_strategy'},
+  {source:'integration_strategy', target:'interface_list'},
+  {source:'interface_list',       target:'integration_td'},
+  {source:'integration_strategy', target:'integration_td'},
+  {source:'integration_strategy', target:'cutover_plan'},
+  {source:'integration_td',       target:'integration_test'},
+  // Integrate phase
+  {source:'unit_test',            target:'test_strategy'},
+  {source:'test_strategy',        target:'test_cases'},
+  {source:'test_strategy',        target:'integration_test'},
+  {source:'test_strategy',        target:'uat_test'},
+  {source:'test_cases',           target:'integration_test'},
+  {source:'uat_test',             target:'cutover_plan'},
+  // Deploy phase
+  {source:'cutover_plan',         target:'golive_checklist'},
+  {source:'golive_checklist',     target:'hypercare_tracker'},
+  {source:'to_be_process',        target:'kt_plan'},
+  {source:'solution_design',      target:'kt_plan'},
+];
+
+// ════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════
+let inputFile = null, userRefFile = null, cascFile = null;
+let fmt = 'xlsx';
+let conversationHistory = [];
+let _allDocs = [];
+let toastTimer;
+let cascMode = 'new';
+window._currentUserRefEncoded = null;
+window._pulledSystemPrompt    = null;
+window._pulledAdminRefData    = null;
+
+// ════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════
+const srv  = () => document.getElementById('serverUrl').value.replace(/\/$/, '');
+const uname= () => document.getElementById('usernameInput').value.trim() || 'user';
+const delay= ms => new Promise(r => setTimeout(r, ms));
+const getConfigs = () => { try { const r=localStorage.getItem(CONFIG_KEY); if(r) return JSON.parse(r); } catch(_){} return {}; };
+
+function showToast(msg, type='success'){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = type==='error' ? 'var(--red-b)' : 'var(--green-b)';
+  t.style.color = type==='error' ? 'var(--red)' : 'var(--green)';
+  t.className = 'toast show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className='toast', 3500);
+}
+
+function toBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
+function toText(file)  { return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.onerror=rej; r.readAsText(file); }); }
+
+async function encodeFile(file){
+  if(!file) return null;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(['txt','md','csv','json','html'].includes(ext)) return { type:'text', name:file.name, ext, content: await toText(file) };
+  return { type:'base64', name:file.name, ext, mime: MIME_MAP[ext]||'application/octet-stream', content: await toBase64(file) };
+}
+
+function getMirrorAspects(){
+  const ids = ['structure','tone','style','layout','patterns','format'];
+  const labels = { structure:'structure', tone:'tone & voice', style:'style & design', layout:'layout', patterns:'patterns', format:'formatting' };
+  return ids.filter(id => document.getElementById('mir-'+id)?.checked).map(id => labels[id]);
+}
+
+// ════════════════════════════════════════════════
+// TAB SWITCHING
+// ════════════════════════════════════════════════
+function switchTab(name){
+  document.querySelectorAll('.tab-panel').forEach(p => p.className='tab-panel');
+  document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('on'));
+  document.getElementById('panel'+name.charAt(0).toUpperCase()+name.slice(1)).className='tab-panel on';
+  document.getElementById('tab'+name.charAt(0).toUpperCase()+name.slice(1)).classList.add('on');
+  if(name==='cascade') renderCascDocGrid();
+}
+
+// ════════════════════════════════════════════════
+// SERVER PING
+// ════════════════════════════════════════════════
+async function pingServer(){
+  const dot=document.getElementById('sdot'), lbl=document.getElementById('slabel');
+  dot.className='sdot checking'; lbl.textContent='Checking…';
+  try {
+    await fetch(`${srv()}/health`, { signal: AbortSignal.timeout(4000) });
+    dot.className='sdot on'; lbl.textContent='Online ✓';
+    loadLibrary(null);
+  } catch {
+    dot.className='sdot off'; lbl.textContent='Offline';
+  }
+}
+
+// ════════════════════════════════════════════════
+// TEMPLATE CHANGE
+// ════════════════════════════════════════════════
+function onOutputTypeChange(){
+  const ot = document.getElementById('outputType').value;
+  const show = el => document.getElementById(el).style.display = ot ? 'block' : 'none';
+  ['userPromptCard','inputFileCard','userRefCard','outputFilenameCard','outputFormatCard'].forEach(show);
+  document.getElementById('genBtnRow').style.display = ot ? 'flex' : 'none';
+
+  if(ot){
+    const configs = getConfigs();
+    const cfg = configs[ot] || {};
+    // Load saved system prompt & ref from admin config
+    window._pulledSystemPrompt = cfg.prompt || null;
+    if(cfg.refId){
+      window._pulledAdminRefData = { type:'refId', refId:cfg.refId, name:cfg.refName||'reference', ext:cfg.refExt||'', mime:cfg.refMime||'' };
+    } else if(cfg.refData){
+      window._pulledAdminRefData = { type:cfg.refType||'base64', name:cfg.refName, ext:cfg.refExt||'', mime:cfg.refMime||'', content:cfg.refData };
+    } else {
+      window._pulledAdminRefData = null;
+    }
+    document.getElementById('fileName').value = ot.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'document';
+  }
+}
+
+// ════════════════════════════════════════════════
+// FORMAT SELECTION
+// ════════════════════════════════════════════════
+function selFmt(btn){
+  document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  fmt = btn.dataset.fmt;
+}
+
+// ════════════════════════════════════════════════
+// FILE HANDLING — INPUT
+// ════════════════════════════════════════════════
+function handleInputFile(file){
+  if(!file) return;
+  inputFile = file;
+  const ext  = file.name.split('.').pop().toLowerCase();
+  const icon = FILE_ICONS[ext]||'📄';
+  const size = (file.size/1024).toFixed(1);
+  document.getElementById('dz-input').classList.add('filled');
+  document.getElementById('icon-input').textContent   = icon;
+  document.getElementById('title-input').textContent  = 'File attached';
+  document.getElementById('sub-input').textContent    = 'Claude will read this as source content';
+  document.getElementById('chipico-input').textContent= icon;
+  document.getElementById('chipname-input').textContent= file.name;
+  document.getElementById('chipmeta-input').textContent= `${size} KB · ${ext.toUpperCase()} · input data`;
+  document.getElementById('chip-input').classList.add('show');
+}
+function removeInputFile(e){
+  e.stopPropagation(); inputFile=null;
+  document.getElementById('fi-input').value='';
+  document.getElementById('dz-input').classList.remove('filled');
+  document.getElementById('icon-input').textContent='📂';
+  document.getElementById('title-input').textContent='Drop your file here or click to browse';
+  document.getElementById('sub-input').textContent='Claude reads this as source content and data for generation';
+  document.getElementById('chip-input').classList.remove('show');
+}
+function onDragOver(e,id){ e.preventDefault(); document.getElementById(id).classList.add('drag'); }
+function onDragLeave(id){ document.getElementById(id).classList.remove('drag'); }
+function onDropInput(e){
+  e.preventDefault(); document.getElementById('dz-input').classList.remove('drag');
+  const f=e.dataTransfer.files[0]; if(f) handleInputFile(f);
+}
+
+// ════════════════════════════════════════════════
+// FILE HANDLING — USER REF
+// ════════════════════════════════════════════════
+function onUserRefToggle(){
+  const on = document.getElementById('userRefToggle').checked;
+  document.getElementById('userRefZone').className = on ? 'user-ref-zone open' : 'user-ref-zone';
+  if(!on){ window._currentUserRefEncoded=null; }
+}
+function handleUserRefFile(file){
+  if(!file) return;
+  userRefFile = file;
+  const ext  = file.name.split('.').pop().toLowerCase();
+  const icon = FILE_ICONS[ext]||'📄';
+  const size = (file.size/1024).toFixed(1);
+  document.getElementById('dz-user-ref').classList.add('filled');
+  document.getElementById('icon-user-ref').textContent ='icon uploaded';
+  document.getElementById('title-user-ref').textContent= 'Reference attached';
+  document.getElementById('sub-user-ref').textContent  = 'Claude will mirror its style';
+  document.getElementById('chipico-user-ref').textContent= icon;
+  document.getElementById('chipname-user-ref').textContent= file.name;
+  document.getElementById('chipmeta-user-ref').textContent= `${size} KB · ${ext.toUpperCase()} · style reference`;
+  document.getElementById('chip-user-ref').classList.add('show');
+  document.getElementById('mirrorGrid').style.display='grid';
+  encodeFile(file).then(enc => { window._currentUserRefEncoded = enc; });
+}
+function removeUserRefFile(e){
+  e.stopPropagation(); userRefFile=null; window._currentUserRefEncoded=null;
+  document.getElementById('fi-user-ref').value='';
+  document.getElementById('dz-user-ref').classList.remove('filled');
+  document.getElementById('icon-user-ref').textContent='📂';
+  document.getElementById('title-user-ref').textContent='Upload your reference file';
+  document.getElementById('sub-user-ref').textContent='Output will follow its structure, design and tone';
+  document.getElementById('chip-user-ref').classList.remove('show');
+  document.getElementById('mirrorGrid').style.display='none';
+}
+function onDropUserRef(e){
+  e.preventDefault(); document.getElementById('dz-user-ref').classList.remove('drag');
+  const f=e.dataTransfer.files[0]; if(f) handleUserRefFile(f);
+}
+
+// ════════════════════════════════════════════════
+// PROGRESS HELPERS
+// ════════════════════════════════════════════════
+function setStep(n, state, time){
+  const el = document.getElementById('p'+n);
+  el.className='step '+state;
+  if(time) document.getElementById('t'+n).textContent=time+'s';
+}
+function showErr(msg){
+  const b=document.getElementById('errBox'); b.textContent='⚠ '+msg; b.className='err-box show';
+}
+
+// ════════════════════════════════════════════════
+// CONVERSATION MEMORY
+// ════════════════════════════════════════════════
+function buildAssistantMemory(){
+  if(conversationHistory.length===0) return null;
+  const recent = conversationHistory.slice(-3);
+  const blocks = recent.map(t => [
+    '[Turn '+t.turnNum+']',
+    'Template: '+t.outputType,
+    'Instruction: '+t.userPrompt.slice(0,600),
+    'Generated: '+t.fileName+' ('+t.outputFormat.toUpperCase()+')',
+    'Summary: '+t.preview.slice(0,800),
+  ].join('\n'));
+  return [
+    '=== CONVERSATION HISTORY ===', blocks.join('\n\n---\n\n'), '=== END HISTORY ===','',
+    'You are continuing a multi-turn session. Build upon, refine, or extend the previous output.',
+    'Maintain consistency unless explicitly asked to change.',
+  ].join('\n');
+}
+
+function addTurnToHistory(data){
+  conversationHistory.push({ turnNum: conversationHistory.length+1, ...data, timestamp: new Date().toLocaleTimeString() });
+  renderConvPanel();
+  updateConvUI();
+}
+
+function updateConvUI(){
+  const n = conversationHistory.length;
+  const mt = document.getElementById('metaToast');
+  const card = document.getElementById('asstPromptCard');
+  const preview = document.getElementById('asstPromptPreview');
+  const refineBtn = document.getElementById('refineBtn');
+  if(n>0){
+    const mem = buildAssistantMemory();
+    card.className='card asst-card show';
+    preview.textContent = mem;
+    refineBtn.className='refine-btn show';
+    mt.className='meta-toast show';
+    document.getElementById('metaToastTurn').textContent='Turn '+n+' done';
+    document.getElementById('metaToastDesc').innerHTML = n===1
+      ? 'Claude now has memory of your first generation. Click <strong>↺ Refine / Continue</strong> to extend or modify.'
+      : '<strong>'+n+' turns completed.</strong> Claude carries full conversation memory — each refinement builds cumulatively.';
+  } else {
+    card.className='card asst-card'; preview.textContent='';
+    refineBtn.className='refine-btn'; mt.className='meta-toast';
+  }
+}
+
+function renderConvPanel(){
+  const panel = document.getElementById('convPanel');
+  const list  = document.getElementById('convTurnList');
+  const count = document.getElementById('convTurnCount');
+  if(conversationHistory.length===0){ panel.className='conv-panel'; return; }
+  panel.className='conv-panel show';
+  count.textContent=`${conversationHistory.length} turn${conversationHistory.length>1?'s':''}`;
+  list.innerHTML=conversationHistory.map((t,i)=>{
+    const bc=['t1','t2','t3'][i%3];
+    return `<div class="conv-turn">
+      <div class="turn-badge ${bc}">T${t.turnNum}</div>
+      <div class="turn-content">
+        <div class="turn-label">${t.outputType} · ${t.timestamp}</div>
+        <div class="turn-summary">${t.userPrompt.slice(0,120)}${t.userPrompt.length>120?'…':''}</div>
+        <div class="turn-file" onclick="reDownload('${t.fileId}','${t.fileName}')">↓ ${t.fileName}</div>
+      </div></div>`;
+  }).join('');
+}
+
+function toggleConvPanel(){
+  const b=document.getElementById('convBody'), c=document.getElementById('convChevron');
+  const open=b.classList.contains('open');
+  b.className=open?'conv-body':'conv-body open';
+  c.className=open?'conv-chevron':'conv-chevron open';
+}
+
+function clearHistory(e){
+  if(e) e.stopPropagation();
+  if(conversationHistory.length===0) return;
+  if(!confirm(`Clear all ${conversationHistory.length} turn(s)?`)) return;
+  conversationHistory=[];
+  renderConvPanel(); updateConvUI();
+  showToast('✓ Conversation history cleared');
+}
+
+function reDownload(fileId, fileName){
+  const a=document.createElement('a');
+  a.href=`${srv()}/download/${fileId}?name=${encodeURIComponent(fileName)}`;
+  a.download=fileName; a.click();
+}
+
+// ════════════════════════════════════════════════
+// GENERATE
+// ════════════════════════════════════════════════
+async function generate(isRefinement=false){
+  const outputType = document.getElementById('outputType').value.trim();
+  const userPrmt   = document.getElementById('userPrompt').value.trim();
+  const fileName   = document.getElementById('fileName').value.trim() || 'output';
+
+  document.getElementById('errBox').className='err-box';
+  document.getElementById('resultCard').className='result-card';
+
+  if(!outputType){ document.getElementById('progCard').className='prog-card show'; showErr('Please select a Template first.'); return; }
+
+  const hasPrompt = !!userPrmt;
+  const hasFile   = !!inputFile;
+  if(!hasPrompt && !hasFile){
+    document.getElementById('progCard').className='prog-card show';
+    showErr('Please provide either a User Prompt or an Input File — at least one is required.');
+    return;
+  }
+
+  const systemPrmt = window._pulledSystemPrompt || '';
+  let mergedPrompt = `Template: ${outputType}\n\n`;
+  if(systemPrmt) mergedPrompt += `System Instructions:\n${systemPrmt}`;
+  if(userPrmt)   mergedPrompt += (systemPrmt ? '\n\nAdditional user instructions:\n' : 'User Instructions:\n') + userPrmt;
+
+  const btn       = document.getElementById('genBtn');
+  const refineBtn = document.getElementById('refineBtn');
+  btn.disabled=true; if(refineBtn) refineBtn.disabled=true;
+  btn.innerHTML='<span class="spin"></span> &nbsp;Claude is generating…';
+  document.getElementById('progCard').className='prog-card show';
+  [1,2,3,4,5].forEach(n=>setStep(n,''));
+
+  try {
+    setStep(1,'active');
+    const t1 = Date.now();
+    const fileData = await encodeFile(inputFile);
+
+    let refData = window._currentUserRefEncoded || window._pulledAdminRefData || null;
+    const mirrorAspects = refData ? getMirrorAspects() : [];
+    setStep(1,'done',((Date.now()-t1)/1000).toFixed(1));
+
+    setStep(2,'active'); setStep(3,'active');
+    const t2 = Date.now();
+
+    const progressTimer = setInterval(()=>{
+      const el=document.getElementById('p3');
+      if(el && el.classList.contains('active'))
+        document.getElementById('t3').textContent=((Date.now()-t2)/1000).toFixed(0)+'s';
+    }, 1000);
+
+    let res;
+    try {
+      res = await fetch(`${srv()}/generate`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          userPrompt:      mergedPrompt,
+          outputFormat:    fmt,
+          fileName,
+          fileData,
+          refData,
+          mirrorAspects,
+          assistantMemory: buildAssistantMemory(),
+          isRefinement,
+          username:        uname(),
+        }),
+      });
+    } finally { clearInterval(progressTimer); }
+
+    setStep(2,'done',((Date.now()-t2)/1000).toFixed(1));
+    setStep(3,'done',((Date.now()-t2)/1000).toFixed(1));
+
+    if(!res.ok){
+      const err = await res.json().catch(()=>({error:`Server error ${res.status}`}));
+      throw new Error(err.error || `Server error ${res.status}`);
+    }
+
+    setStep(4,'active');
+    const t4 = Date.now();
+    const data = await res.json();
+    setStep(4,'done',((Date.now()-t4)/1000).toFixed(1));
+    setStep(5,'done','—');
+
+    document.getElementById('rName').textContent = data.fileName;
+    document.getElementById('rMeta').textContent = `Template: ${outputType} · Claude AI${inputFile?' · Data: "'+inputFile.name+'"':''}`;
+    document.getElementById('rPreview').textContent = data.preview || '(No preview available)';
+    document.getElementById('resultCard').className='result-card show';
+
+    const dlBtn = document.getElementById('dlBtn');
+    dlBtn.href = `${srv()}/download/${encodeURIComponent(data.fileId)}?name=${encodeURIComponent(data.fileName)}`;
+    dlBtn.download = data.fileName;
+
+    loadLibrary(null);
+    addTurnToHistory({ userPrompt:mergedPrompt, outputType, fileName:data.fileName, fileId:data.fileId, outputFormat:fmt, preview:data.preview||'' });
+    showToast(`✓ Generated: ${data.fileName}`);
+
+  } catch(err){
+    showErr(err.message || 'Generation failed — check server connection.');
+    console.error('[Generate]', err);
+  } finally {
+    btn.disabled=false; btn.innerHTML='✦ &nbsp;Generate with Claude Agent';
+    if(refineBtn) refineBtn.disabled=false;
+  }
+}
+
+// ════════════════════════════════════════════════
+// DOCUMENT LIBRARY
+// ════════════════════════════════════════════════
+async function loadLibrary(e){
+  if(e) e.stopPropagation();
+  try {
+    const res  = await fetch(`${srv()}/documents?username=${encodeURIComponent(uname())}&limit=200`);
+    const data = await res.json();
+    _allDocs   = data.documents || [];
+    renderLibraryTable(_allDocs);
+    const n = _allDocs.length;
+    document.getElementById('libCount').textContent=`${n} file${n!==1?'s':''}`;
+    if(n>0) document.getElementById('libraryPanel').className='library-panel show';
+  } catch(err){ console.warn('Library load failed:', err.message); }
+}
+
+function toggleLibrary(){
+  const b=document.getElementById('libraryBody'), c=document.getElementById('libChevron');
+  const open=b.classList.contains('open');
+  b.className=open?'library-body':'library-body open';
+  c.className=open?'library-chevron':'library-chevron open';
+  if(!open && _allDocs.length===0) loadLibrary(null);
+}
+
+function filterLibrary(){
+  const q   = (document.getElementById('libSearch').value||'').toLowerCase();
+  const fmt2= document.getElementById('libFormat').value||'';
+  const filtered = _allDocs.filter(d => {
+    const mq  = !q    || d.file_name.toLowerCase().includes(q) || (d.template||'').toLowerCase().includes(q);
+    const mf  = !fmt2 || d.output_format===fmt2;
+    return mq && mf;
+  });
+  renderLibraryTable(filtered);
+}
+
+function renderLibraryTable(docs){
+  const wrap = document.getElementById('libTableWrap');
+  if(!docs||docs.length===0){ wrap.innerHTML='<div class="lib-empty">No documents match your filter.</div>'; return; }
+  const chip = f => {
+    const cls={xlsx:'lib-fmt-xlsx',docx:'lib-fmt-docx',pdf:'lib-fmt-pdf',pptx:'lib-fmt-pptx',xml:'lib-fmt-xml'}[f]||'';
+    return `<span class="lib-fmt-chip ${cls}">${f.toUpperCase()}</span>`;
+  };
+  const rows = docs.map(d=>{
+    const dt=new Date(d.created_at).toLocaleString();
+    return `<tr>
+      <td><div class="lib-fname" title="${d.file_name}">${d.file_name}</div><div class="lib-template">${d.template||''}</div></td>
+      <td>${chip(d.output_format)}</td>
+      <td style="white-space:nowrap;font-size:10px;color:var(--muted)">${dt}</td>
+      <td style="text-align:right;white-space:nowrap">${d.size_kb} KB</td>
+      <td><button class="lib-dl-btn" onclick="libDownload('${d.id}','${d.file_name.replace(/'/g,"\\'")}')">↓ Download</button></td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML=`<div style="overflow-x:auto"><table class="lib-table"><thead><tr><th>File</th><th>Format</th><th>Created</th><th>Size</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function libDownload(fileId, fileName){
+  const a=document.createElement('a');
+  a.href=`${srv()}/download/${encodeURIComponent(fileId)}?name=${encodeURIComponent(fileName)}`;
+  a.download=fileName; a.click();
+}
+
+// ════════════════════════════════════════════════
+// ASK LIBRARY
+// ════════════════════════════════════════════════
+function setAskExample(btn){ document.getElementById('askInput').value=btn.textContent; }
+
+async function askLibrary(){
+  const q = document.getElementById('askInput').value.trim();
+  if(!q) return;
+  const btn = document.getElementById('askBtn');
+  const res = document.getElementById('askResults');
+  const links= document.getElementById('askDocLinks');
+  const meta = document.getElementById('askMeta');
+  btn.disabled=true; btn.textContent='Asking…';
+  res.className='ask-results'; res.textContent='Thinking…';
+  links.style.display='none'; meta.textContent='';
+  try {
+    const r = await fetch(`${srv()}/ask-library`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ question:q, username:uname() }),
+    });
+    const data = await r.json();
+    res.className='ask-results';
+    res.textContent = data.answer || '(No answer returned)';
+    if(data.documents && data.documents.length>0){
+      links.style.display='flex';
+      links.innerHTML=data.documents.map(d=>
+        `<span class="ask-doc-link" onclick="libDownload('${d.id}','${d.file_name}')">↓ ${d.file_name}</span>`
+      ).join('');
+    }
+    if(data.model) meta.textContent=`Model: ${data.model} · ${data.documents?.length||0} doc(s) referenced`;
+  } catch(err){
+    res.className='ask-results'; res.textContent='⚠ Error: '+err.message;
+  } finally { btn.disabled=false; btn.textContent='Ask'; }
+}
+
+// ════════════════════════════════════════════════
+// CASCADE GENERATE
+// ════════════════════════════════════════════════
+function setCascMode(m){
+  cascMode=m;
+  document.getElementById('cascModeNew').className   = 'casc-mode-btn'+(m==='new'?' on':'');
+  document.getElementById('cascModeDelta').className = 'casc-mode-btn'+(m==='delta'?' on':'');
+  document.getElementById('cascNewSection').style.display   = m==='new'   ? 'block' : 'none';
+  document.getElementById('cascDeltaSection').style.display = m==='delta' ? 'block' : 'none';
+  if(m==='delta') cascLoadSessionsForDelta();
+}
+
+function renderCascDocGrid(){
+  const grid = document.getElementById('cascDocGrid');
+  grid.innerHTML = CASCADE_DOCS.map(d=>`
+    <label class="casc-doc-item" onclick="this.classList.toggle('selected')">
+      <input type="checkbox" id="casc-cb-${d.id}" value="${d.id}">
+      <div>
+        <div class="casc-doc-label">${d.label}</div>
+        <div class="casc-doc-phase">${d.phase}</div>
+      </div>
+    </label>`).join('');
+  // sync checkbox with selected class
+  document.querySelectorAll('.casc-doc-item input').forEach(cb=>{
+    cb.addEventListener('change',()=>{
+      cb.closest('.casc-doc-item').classList.toggle('selected',cb.checked);
+    });
+  });
+}
+
+function cascSelectAll(){ document.querySelectorAll('.casc-doc-item input').forEach(cb=>{ cb.checked=true; cb.closest('.casc-doc-item').classList.add('selected'); }); }
+function cascClearAll() { document.querySelectorAll('.casc-doc-item input').forEach(cb=>{ cb.checked=false; cb.closest('.casc-doc-item').classList.remove('selected'); }); }
+function cascSelectPhase(ph){
+  CASCADE_DOCS.forEach(d=>{
+    const cb=document.getElementById('casc-cb-'+d.id);
+    if(cb && d.phase===ph){ cb.checked=true; cb.closest('.casc-doc-item').classList.add('selected'); }
+  });
+}
+
+function cascDrop(e){
+  e.preventDefault(); document.getElementById('cascDZ').classList.remove('drag');
+  const f=e.dataTransfer.files[0]; if(f) cascFileSet(f);
+}
+function cascFileSelect(inp){ if(inp.files[0]) cascFileSet(inp.files[0]); }
+function cascFileSet(f){
+  cascFile=f;
+  document.getElementById('cascDZ').classList.add('filled');
+  document.getElementById('cascFileChosen').textContent='✓ '+f.name;
+}
+
+// ════════════════════════════════════════════════
+// PHASE COLORS
+// ════════════════════════════════════════════════
+const PHASE_COLORS = {
+  'Initiate':    { bg:'#4a7fba', border:'#1a4a7a', text:'#e8f4fd' },
+  'Confirm':     { bg:'#7b6fbf', border:'#3d2d8a', text:'#f0eefa' },
+  'Design-Build':{ bg:'#c97c1a', border:'#7a4400', text:'#fff3d8' },
+  'Integrate':   { bg:'#c96b50', border:'#8a2800', text:'#ffeee8' },
+  'Deploy':      { bg:'#6aaa38', border:'#2a6000', text:'#e8ffe0' },
+};
+const PHASE_COLORS_GRND = {
+  'Initiate':    { bg:'#85b7eb', border:'#0c447c', text:'#0c3d70', swimlane:'rgba(219,234,254,0.50)' },
+  'Confirm':     { bg:'#afa9ec', border:'#3c3489', text:'#2e2870', swimlane:'rgba(237,233,254,0.50)' },
+  'Design-Build':{ bg:'#ef9f27', border:'#633806', text:'#4d2c05', swimlane:'rgba(254,243,199,0.55)' },
+  'Integrate':   { bg:'#f0997b', border:'#712b13', text:'#5a2010', swimlane:'rgba(255,237,213,0.50)' },
+  'Deploy':      { bg:'#97c459', border:'#27500a', text:'#1f3f08', swimlane:'rgba(220,252,231,0.50)' },
+};
+
+// ════════════════════════════════════════════════
+// CYTOSCAPE CDN LOADER
+// ════════════════════════════════════════════════
+(function loadCytoscapeCDN(){
+  function addScript(src,cb){ const el=document.createElement('script'); el.src=src; el.onload=cb||null; document.head.appendChild(el); }
+  addScript('https://unpkg.com/cytoscape@3.29.2/dist/cytoscape.min.js', ()=>{
+    addScript('https://unpkg.com/dagre@0.8.5/dist/dagre.min.js', ()=>{
+      addScript('https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js', ()=>{
+        if(typeof cytoscape!=='undefined' && typeof cytoscapeDagre!=='undefined'){
+          cytoscape.use(cytoscapeDagre);
+          window._cyReady=true;
+          if(window._pendingCascInit) window._pendingCascInit();
+          if(window._pendingGrndInit) window._pendingGrndInit();
+        }
+      });
+    });
+  });
+})();
+
+// ════════════════════════════════════════════════
+// CASCADE — FULL SSE IMPLEMENTATION
+// ════════════════════════════════════════════════
+let _cascMode='new', _cascInputFile=null, _deltaInputFile=null, _deltaType='prompt';
+let _cascSessionId=null, _cascGraphData=null, _cascCyInstance=null;
+let _cascNodeStates={}, _cascDocs={}, _cascTotalDocs=0, _cascDoneCount=0;
+let _deltaAnalysisResult=null, _deltaSourceSessionId=null;
+let _cascDlCyInstance=null, _cascDlDownloaded=new Set();
+let _cascSSE=null;
+
+async function cascLaunch(){
+  const selected=CASCADE_DOCS.filter(d=>document.getElementById('casc-cb-'+d.id)?.checked);
+  if(!cascFile){ showToast('⚠ Please upload a source document first.','error'); return; }
+  if(selected.length===0){ showToast('⚠ Please select at least one document to generate.','error'); return; }
+
+  const btn=document.getElementById('cascLaunchBtn');
+  btn.disabled=true; btn.textContent='⏳ Starting cascade…';
+
+  let encoded;
+  try { encoded=await encodeFile(cascFile); }
+  catch(e){ showToast('⚠ File encoding failed.','error'); btn.disabled=false; btn.textContent='⚡ Generate Selected Documents'; return; }
+
+  try {
+    const r=await fetch(`${srv()}/cascade/start`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        fileData:encoded, fileName:cascFile.name,
+        selectedDocs:selected.map(d=>d.id),
+        username:uname(),
+      }),
+    });
+    if(!r.ok) throw new Error('Server '+r.status);
+    const data=await r.json();
+    _cascSessionId=data.sessionId;
+    _cascGraphData=data.graph||null;
+    _cascDocs={}; _cascNodeStates={}; _cascTotalDocs=selected.length; _cascDoneCount=0;
+    selected.forEach(d=>{ _cascDocs[d.id]=d; _cascNodeStates[d.id]='queued'; });
+
+    // show progress UI
+    document.getElementById('cascProgress').style.display='block';
+    document.getElementById('cascWaveTitle').textContent=`Cascade started — ${selected.length} documents`;
+    document.getElementById('cascProgLabel').textContent=`0 / ${selected.length}`;
+    document.getElementById('cascProgBar').style.width='0%';
+    document.getElementById('cascItems').innerHTML=selected.map(d=>`<div class="casc-item waiting" id="ci-${d.id}"><div class="casc-item-dot"></div><span>${d.label}</span></div>`).join('');
+
+    // init cytoscape graph if data available
+    if(_cascGraphData && window._cyReady) cascInitGraph(selected.map(d=>d.id));
+    else window._pendingCascInit=()=>{ if(_cascGraphData) cascInitGraph(selected.map(d=>d.id)); };
+
+    cascConnectSSE(_cascSessionId);
+  } catch(err){
+    showToast('⚠ Cascade start failed: '+err.message,'error');
+    btn.disabled=false; btn.textContent='⚡ Generate Selected Documents';
+  }
+}
+
+function cascInitGraph(selectedNodes){
+  const wrap=document.getElementById('cascGraphWrap');
+  const container=document.getElementById('cascGraphCy');
+  wrap.style.display='block';
+  if(_cascCyInstance){ _cascCyInstance.destroy(); _cascCyInstance=null; }
+
+  const selectedSet=new Set(selectedNodes);
+  const nodes=((_cascGraphData&&_cascGraphData.nodes)||selectedNodes.map(id=>{
+    const doc=CASCADE_DOCS.find(d=>d.id===id)||{id,label:id,phase:'Initiate'};
+    return { data:{ id:doc.id, label:doc.label, phase:doc.phase } };
+  }));
+  // use server edges when available, else fall back to CASCADE_EDGES filtered to selected nodes
+  const edges=(_cascGraphData&&_cascGraphData.edges)
+    ? _cascGraphData.edges
+    : CASCADE_EDGES.filter(e=>selectedSet.has(e.source)&&selectedSet.has(e.target))
+        .map(e=>({data:{id:`${e.source}_${e.target}`,source:e.source,target:e.target}}));
+
+  _cascCyInstance=cytoscape({
+    container, elements:{ nodes, edges },
+    style:buildCascCyStyle(),
+    layout:{ name:'dagre', rankDir:'TB', nodeSep:30, rankSep:50, padding:20 },
+    userZoomingEnabled:true, userPanningEnabled:true,
+  });
+}
+
+function buildCascCyStyle(){
+  const base=[
+    { selector:'node', style:{ 'label':'data(label)', 'text-wrap':'wrap', 'text-max-width':'80px',
+      'font-size':'9px', 'font-family':'DM Sans,sans-serif', 'text-valign':'center', 'text-halign':'center',
+      'width':'80px', 'height':'34px', 'shape':'roundrectangle',
+      'background-color':'#1E1E2C', 'border-color':'#28283C', 'border-width':1.5, 'color':'#C8C4DC' }},
+    { selector:'edge', style:{ 'curve-style':'bezier', 'target-arrow-shape':'triangle',
+      'line-color':'#363652', 'target-arrow-color':'#363652', 'width':1.5, 'opacity':.7 }},
+    { selector:'.node-queued', style:{ 'background-color':'#161620', 'border-color':'#363652', 'color':'#6B6B90' }},
+    { selector:'.node-running', style:{ 'background-color':'rgba(161,0,255,.15)', 'border-color':'#A100FF', 'color':'#C660FF', 'border-width':2 }},
+    { selector:'.node-done',    style:{ 'background-color':'rgba(0,229,160,.12)', 'border-color':'#00E5A0', 'color':'#00E5A0' }},
+    { selector:'.node-error',   style:{ 'background-color':'rgba(255,77,106,.12)', 'border-color':'#FF4D6A', 'color':'#FF4D6A' }},
+  ];
+  Object.entries(PHASE_COLORS).forEach(([ph,c])=>{
+    base.push({ selector:`[phase="${ph}"]`, style:{ 'background-color':c.bg+'22', 'border-color':c.border, 'color':c.text }});
+  });
+  return base;
+}
+
+function cascConnectSSE(sessionId){
+  if(_cascSSE){ _cascSSE.close(); }
+  _cascSSE=new EventSource(`${srv()}/cascade/stream/${sessionId}`);
+  _cascSSE.onmessage=e=>{ try { cascHandleEvent(JSON.parse(e.data)); } catch(_){} };
+  _cascSSE.onerror=()=>{ console.warn('[Cascade SSE] connection error'); };
+}
+
+function cascHandleEvent(ev){
+  const {event:type,data}=ev;
+  switch(type){
+    case 'session_start':
+      document.getElementById('cascWaveTitle').textContent='Processing source document…';
+      break;
+    case 'waves_planned':
+      document.getElementById('cascWaveTitle').textContent=`${data.total_waves||'?'} wave(s) planned — starting…`;
+      break;
+    case 'wave_start':
+      document.getElementById('cascWaveTitle').textContent=`Wave ${data.wave_number||''}: generating documents…`;
+      break;
+    case 'node_queued':
+      cascSetNodeState(data.node_id,'queued');
+      break;
+    case 'node_generating':
+    case 'node_updating':
+      cascSetNodeState(data.node_id,'running');
+      document.getElementById('cascWaveTitle').textContent=`Generating: ${data.label||data.node_id}`;
+      break;
+    case 'content_chunk':
+      break;
+    case 'node_complete':
+    case 'node_updated':
+      cascSetNodeState(data.node_id,'done');
+      _cascDoneCount++;
+      updateCascProgress(_cascDoneCount,_cascTotalDocs);
+      if(data.file_id||data.fileId){ _cascDocs[data.node_id]=Object.assign({},_cascDocs[data.node_id]||{},{fileId:data.file_id||data.fileId,fileName:data.file_name||data.fileName}); }
+      break;
+    case 'node_error':
+      cascSetNodeState(data.node_id,'error');
+      break;
+    case 'session_complete':
+    case 'delta_complete':
+    case 'stream_end':
+      document.getElementById('cascWaveTitle').textContent='Cascade complete ✓';
+      if(_cascSSE){ _cascSSE.close(); _cascSSE=null; }
+      document.getElementById('cascLaunchBtn').disabled=false;
+      document.getElementById('cascLaunchBtn').textContent='⚡ Generate Selected Documents';
+      showToast('✓ Cascade complete!');
+      cascShowPostSection();
+      loadLibrary(null);
+      break;
+  }
+}
+
+function cascSetNodeState(nodeId,state){
+  _cascNodeStates[nodeId]=state;
+  const el=document.getElementById('ci-'+nodeId);
+  if(el) el.className='casc-item '+state;
+  if(_cascCyInstance){
+    const n=_cascCyInstance.getElementById(nodeId);
+    if(n.length){ n.removeClass('node-queued node-running node-done node-error'); n.addClass('node-'+state); }
+  }
+}
+
+function updateCascProgress(done,total){
+  const pct=total>0?Math.round(done/total*100):0;
+  document.getElementById('cascProgBar').style.width=pct+'%';
+  document.getElementById('cascProgLabel').textContent=`${done} / ${total}`;
+}
+
+function cascShowPostSection(){
+  document.getElementById('cascPostSection').style.display='block';
+  // build download cytoscape graph
+  if(window._cyReady) cascBuildDownloadGraph();
+  else window._pendingDlGraph=()=>cascBuildDownloadGraph();
+  // render lib table
+  const docs=Object.values(_cascDocs).filter(d=>d.fileId||d.fileName);
+  const wrap=document.getElementById('cascLibTableWrap');
+  if(!docs.length){ wrap.innerHTML='<p style="color:var(--muted);font-size:12px">No files to show.</p>'; return; }
+  wrap.innerHTML=`<table class="casc-lib-table"><thead><tr><th>Document</th><th>Phase</th><th>Actions</th></tr></thead><tbody>
+    ${docs.map(d=>`<tr><td style="color:var(--text)">${d.label||d.id}</td><td><span style="font-size:10px;color:var(--muted)">${d.phase||''}</span></td>
+    <td><a class="casc-lib-btn" href="${srv()}/download/${encodeURIComponent(d.fileId)}?name=${encodeURIComponent(d.fileName||d.id)}" download="${d.fileName||d.id}">↓ Download</a>
+    <button class="casc-lib-btn fin" onclick="cascFinalise('${d.id}')">✓ Finalise</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function cascBuildDownloadGraph(){
+  const container=document.getElementById('cascDlGraphCy');
+  if(_cascDlCyInstance){ _cascDlCyInstance.destroy(); _cascDlCyInstance=null; }
+  const nodes=CASCADE_DOCS.filter(d=>_cascNodeStates[d.id]).map(d=>({
+    data:{ id:d.id, label:d.label, phase:d.phase, state:_cascNodeStates[d.id]||'queued' }
+  }));
+  _cascDlCyInstance=cytoscape({
+    container, elements:{ nodes, edges:[] },
+    style:[
+      { selector:'node', style:{ 'label':'data(label)', 'text-wrap':'wrap', 'text-max-width':'70px',
+        'font-size':'9px', 'text-valign':'center', 'text-halign':'center',
+        'width':'70px', 'height':'30px', 'shape':'roundrectangle',
+        'background-color':'rgba(0,229,160,.12)', 'border-color':'#00E5A0', 'border-width':1.5, 'color':'#00E5A0' }},
+      { selector:'[state="error"]', style:{ 'background-color':'rgba(255,77,106,.12)', 'border-color':'#FF4D6A', 'color':'#FF4D6A' }},
+      { selector:'[state="queued"]', style:{ 'background-color':'#161620', 'border-color':'#363652', 'color':'#6B6B90' }},
+    ],
+    layout:{ name:'dagre', rankDir:'LR', nodeSep:20, rankSep:40, padding:20 },
+  });
+  _cascDlCyInstance.on('tap','node',evt=>{
+    const d=evt.target.data();
+    const doc=_cascDocs[d.id];
+    if(doc&&doc.fileId){
+      const a=document.createElement('a');
+      a.href=`${srv()}/download/${encodeURIComponent(doc.fileId)}?name=${encodeURIComponent(doc.fileName||d.id)}`;
+      a.download=doc.fileName||d.id; document.body.appendChild(a); a.click(); a.remove();
+      evt.target.addClass('downloaded');
+    }
+  });
+}
+
+async function cascFinalise(nodeId){
+  try {
+    await fetch(`${srv()}/cascade/finalise`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:_cascSessionId,nodeId})});
+    showToast('✓ Finalised: '+nodeId);
+  } catch(e){ showToast('⚠ Finalise failed','error'); }
+}
+
+function cascDownloadAll(){
+  Object.values(_cascDocs).forEach(d=>{
+    if(!d.fileId) return;
+    const a=document.createElement('a');
+    a.href=`${srv()}/download/${encodeURIComponent(d.fileId)}?name=${encodeURIComponent(d.fileName||d.id)}`;
+    a.download=d.fileName||d.id; document.body.appendChild(a); a.click(); a.remove();
+  });
+}
+
+function cascTriggerDelta(){
+  setCascMode('delta');
+  cascLoadSessionsForDelta();
+}
+
+async function cascLoadSessionsForDelta(){
+  const list=document.getElementById('deltaSessList');
+  list.innerHTML='<div style="color:var(--muted);font-size:12px">Loading…</div>';
+  try {
+    const r=await fetch(`${srv()}/cascade/sessions?username=${encodeURIComponent(uname())}`);
+    const data=await r.json();
+    const sessions=data.sessions||[];
+    if(!sessions.length){ list.innerHTML='<div style="color:var(--muted);font-size:12px">No previous sessions found.</div>'; return; }
+    list.innerHTML=sessions.map(s=>`
+      <div class="delta-sess-item" onclick="selectDeltaSession('${s.sessionId}','${s.sourceFile||''}','${s.createdAt||''}')" id="dsi-${s.sessionId}">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">${s.sourceFile||s.sessionId}</div>
+          <div style="font-size:10px;color:var(--muted)">${s.docCount||0} docs · ${s.createdAt?new Date(s.createdAt).toLocaleDateString():''}</div>
+        </div>
+      </div>`).join('');
+  } catch(e){ list.innerHTML='<div style="color:var(--red);font-size:12px">Failed to load sessions.</div>'; }
+}
+
+function selectDeltaSession(sessionId,file,date){
+  _deltaSourceSessionId=sessionId;
+  document.querySelectorAll('.delta-sess-item').forEach(el=>el.classList.remove('on'));
+  const el=document.getElementById('dsi-'+sessionId);
+  if(el) el.classList.add('on');
+  document.getElementById('deltaChangeCard').style.display='block';
+}
+
+function setDeltaType(t){
+  _deltaType=t;
+  document.getElementById('dtypePromptBtn').style.borderColor = t==='prompt'?'var(--gold-b)':'var(--border2)';
+  document.getElementById('dtypePromptBtn').style.color       = t==='prompt'?'var(--gold)':'var(--text2)';
+  document.getElementById('dtypeFileBtn').style.borderColor   = t==='file'  ?'var(--gold-b)':'var(--border2)';
+  document.getElementById('dtypeFileBtn').style.color         = t==='file'  ?'var(--gold)':'var(--text2)';
+  document.getElementById('deltaPromptInp').style.display     = t==='prompt'?'block':'none';
+  document.getElementById('deltaFileZone').style.display      = t==='file'  ?'block':'none';
+}
+
+function cascDeltaFileSet(file){
+  if(!file) return;
+  _deltaInputFile=file;
+  document.getElementById('deltaFileChosen').textContent='✓ '+file.name;
+}
+
+async function deltaAnalyse(){
+  if(!_deltaSourceSessionId){ showToast('⚠ Select a session first','error'); return; }
+  const prompt=document.getElementById('deltaPromptInp').value.trim();
+  if(_deltaType==='prompt'&&!prompt){ showToast('⚠ Enter a description of the change','error'); return; }
+
+  const btn=document.getElementById('deltaAnalyseBtn');
+  btn.disabled=true; btn.textContent='⏳ Analysing…';
+
+  try {
+    const body={ sessionId:_deltaSourceSessionId, changeType:_deltaType, changePrompt:prompt };
+    if(_deltaType==='file'&&_deltaInputFile){ body.fileData=await encodeFile(_deltaInputFile); body.fileName=_deltaInputFile.name; }
+    const r=await fetch(`${srv()}/cascade/delta/analyse`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok) throw new Error('Server '+r.status);
+    _deltaAnalysisResult=await r.json();
+    cascShowDeltaScope(_deltaAnalysisResult);
+    document.getElementById('deltaRunBtn').style.display='block';
+    showToast('✓ Analysis complete — '+(_deltaAnalysisResult.affectedNodes||[]).length+' docs affected');
+  } catch(e){ showToast('⚠ Analysis failed: '+e.message,'error'); }
+  finally { btn.disabled=false; btn.textContent='⚡ Analyse Impact'; }
+}
+
+function cascShowDeltaScope(result){
+  const panel=document.getElementById('deltaScopePanel');
+  const nodes=(result.affectedNodes||[]);
+  panel.style.display='block';
+  panel.innerHTML=`<div class="delta-scope-panel">
+    <div class="delta-scope-title">⚡ ${nodes.length} documents will be updated</div>
+    ${nodes.map(n=>`<div class="delta-scope-node"><span class="delta-scope-node-id">${n.id||n}</span><span>${n.label||n}</span></div>`).join('')}
+  </div>`;
+}
+
+async function cascLaunchDelta(){
+  if(!_deltaSourceSessionId||!_deltaAnalysisResult){ showToast('⚠ Run analysis first','error'); return; }
+  const btn=document.getElementById('deltaRunBtn');
+  btn.disabled=true; btn.textContent='⏳ Starting…';
+  try {
+    const r=await fetch(`${srv()}/cascade/delta/start`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sessionId:_deltaSourceSessionId,analysisResult:_deltaAnalysisResult,username:uname()})});
+    if(!r.ok) throw new Error('Server '+r.status);
+    const data=await r.json();
+    _cascSessionId=data.sessionId;
+    _cascDocs={}; _cascNodeStates={}; _cascDoneCount=0;
+    (_deltaAnalysisResult.affectedNodes||[]).forEach(n=>{
+      const id=n.id||n;
+      const doc=CASCADE_DOCS.find(d=>d.id===id)||{id,label:n.label||id,phase:n.phase||'Initiate'};
+      _cascDocs[id]=doc; _cascNodeStates[id]='queued';
+    });
+    _cascTotalDocs=Object.keys(_cascDocs).length;
+    document.getElementById('cascProgress').style.display='block';
+    document.getElementById('cascWaveTitle').textContent='Delta cascade started…';
+    document.getElementById('cascProgLabel').textContent=`0 / ${_cascTotalDocs}`;
+    document.getElementById('cascProgBar').style.width='0%';
+    document.getElementById('cascItems').innerHTML=Object.values(_cascDocs).map(d=>`<div class="casc-item waiting" id="ci-${d.id}"><div class="casc-item-dot"></div><span>${d.label}</span></div>`).join('');
+    cascConnectSSE(_cascSessionId);
+  } catch(e){ showToast('⚠ Delta start failed: '+e.message,'error'); }
+  finally { btn.disabled=false; btn.textContent='⚡ Run Delta Cascade'; }
+}
+
+// ════════════════════════════════════════════════
+// DOCUMENT GROUNDING
+// ════════════════════════════════════════════════
+let _grndCy=null, _grndStatus=[], _grndActiveNode=null;
+let _grndPulseTimer=null, _grndLinkedNodes=null;
+
+function groundingInit(){
+  if(!window._cyReady){ window._pendingGrndInit=()=>{ groundingLoadStatus(); }; return; }
+  groundingLoadStatus();
+}
+
+async function groundingLoadStatus(){
+  try {
+    const r=await fetch(`${srv()}/admin/grounding`);
+    _grndStatus=await r.json();
+  } catch(e){ _grndStatus=[]; }
+  groundingBuildGraph();
+}
+
+function groundingBuildGraph(){
+  const container=document.getElementById('grndGraphCy');
+  if(!container||!window._cyReady) return;
+  if(_grndCy){ _grndCy.destroy(); _grndCy=null; }
+
+  // build status map — accept both node_id (backend) and nodeId (some APIs)
+  const statusMap={};
+  (_grndStatus||[]).forEach(s=>{ statusMap[s.node_id||s.nodeId]=s; });
+
+  const allNodes=CASCADE_DOCS;
+  const nodeIdSet=new Set(allNodes.map(d=>d.id));
+  const elements={ nodes:[], edges:[] };
+
+  allNodes.forEach(doc=>{
+    const st=statusMap[doc.id];
+    elements.nodes.push({ data:{
+      id:doc.id, label:doc.label, phase:doc.phase,
+      grounded:!!(st&&(st.fileId||st.file_id)),
+      fileName:st?(st.fileName||st.file_name||''):'',
+      fileId:st?(st.fileId||st.file_id||''):'',
+    }});
+  });
+
+  // add edges from CASCADE_EDGES (only between nodes that exist in the graph)
+  CASCADE_EDGES.forEach(e=>{
+    if(nodeIdSet.has(e.source)&&nodeIdSet.has(e.target)){
+      elements.edges.push({ data:{ id:`${e.source}_${e.target}`, source:e.source, target:e.target }});
+    }
+  });
+
+  _grndCy=cytoscape({
+    container, elements,
+    style:_buildGroundingCyStyle(),
+    layout:{ name:'dagre', rankDir:'TB', nodeSep:20, rankSep:45, padding:18 },
+    userZoomingEnabled:true, userPanningEnabled:true,
+  });
+
+  _grndCy.on('tap','node',evt=>{ _grndOpenDrawer(evt.target); });
+
+  const grounded=allNodes.filter(d=>{ const st=statusMap[d.id]; return st&&(st.fileId||st.file_id); }).length;
+  document.getElementById('grndStatusSummary').textContent=`${grounded} / ${allNodes.length} nodes grounded`;
+}
+
+function _buildGroundingCyStyle(){
+  const base=[
+    { selector:'node', style:{
+      'label':'data(label)', 'text-wrap':'wrap', 'text-max-width':'78px',
+      'font-size':'9px', 'font-family':'DM Sans,sans-serif',
+      'text-valign':'center', 'text-halign':'center',
+      'width':'78px', 'height':'32px', 'shape':'roundrectangle',
+      'background-color':'#1E1E2C', 'border-color':'#28283C', 'border-width':1.5, 'color':'#C8C4DC' }},
+    { selector:'edge', style:{ 'curve-style':'bezier','target-arrow-shape':'triangle','line-color':'#363652','target-arrow-color':'#363652','width':1.2,'opacity':.6 }},
+    { selector:'[grounded=true]', style:{ 'border-width':2.5 }},
+    { selector:'.highlighted', style:{ 'border-color':'#FFB800','border-width':3,'background-color':'rgba(255,184,0,.18)' }},
+    { selector:':selected', style:{ 'border-color':'var(--acc)','border-width':3 }},
+  ];
+  Object.entries(PHASE_COLORS_GRND).forEach(([ph,c])=>{
+    base.push({ selector:`[phase="${ph}"]`, style:{ 'background-color':c.bg+'22','border-color':c.border,'color':c.text }});
+    base.push({ selector:`[phase="${ph}"][grounded=true]`, style:{ 'background-color':c.bg+'44','border-color':c.border }});
+  });
+  return base;
+}
+
+const WORKBOOK_NODE_ID = 'config-workbook';
+
+async function _grndOpenDrawer(node){
+  _grndActiveNode=node;
+  const d=node.data();
+  document.getElementById('grndDrawerTitle').textContent=d.label||d.id;
+  const pc=PHASE_COLORS_GRND[d.phase]||PHASE_COLORS_GRND['Initiate'];
+  document.getElementById('grndDrawerPhaseBadge').innerHTML=`<span class="grnd-node-phase-badge" style="background:${pc.bg}33;color:${pc.text};border:1px solid ${pc.border}">${d.phase}</span>`;
+
+  if(d.id===WORKBOOK_NODE_ID){
+    // ── Multi-slot drawer for Configuration Workbook ──
+    document.getElementById('grndFileCard').style.display='none';
+    document.getElementById('grndNoFileCard').style.display='none';
+    document.getElementById('grndUploadZone').style.display='none';
+    document.getElementById('grndLinkedTitle').style.display='none';
+    document.getElementById('grndLinkedList').innerHTML='';
+    await _grndRenderWorkbookSlots();
+  } else {
+    // ── Standard single-file drawer ──
+    document.getElementById('grndWorkbookSlots').innerHTML='';
+    document.getElementById('grndUploadZone').style.display='block';
+    document.getElementById('grndLinkedTitle').style.display='block';
+    if(d.grounded&&d.fileName){
+      document.getElementById('grndFileCard').style.display='block';
+      document.getElementById('grndNoFileCard').style.display='none';
+      document.getElementById('grndFileName').textContent=d.fileName;
+      document.getElementById('grndFileMeta').textContent='Reference file attached';
+      const dlLink=document.getElementById('grndFileDownload');
+      dlLink.href=`${srv()}/admin/grounding/${encodeURIComponent(d.id)}/download`;
+      dlLink.download=d.fileName;
+    } else {
+      document.getElementById('grndFileCard').style.display='none';
+      document.getElementById('grndNoFileCard').style.display='block';
+    }
+    document.getElementById('grndUploadLabel').textContent='';
+    document.getElementById('grndFileIn').value='';
+
+    const linked=_grndCy?_grndCy.nodes(`[phase="${d.phase}"]`).filter(n=>n.id()!==d.id):[];
+    _grndLinkedNodes=linked;
+    document.getElementById('grndLinkedList').innerHTML=linked.map(n=>`<span class="grnd-linked-chip">${n.data('label')}</span>`).join('')||'<span style="font-size:11px;color:var(--muted)">None</span>';
+    _startNeonPulse(linked);
+  }
+
+  document.getElementById('grndDrawer').classList.add('open');
+}
+
+async function _grndRenderWorkbookSlots(){
+  const wrap=document.getElementById('grndWorkbookSlots');
+  wrap.innerHTML='<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Loading slots…</div>';
+  let slots=[];
+  try {
+    const r=await fetch(`${srv()}/admin/workbook-slots`);
+    const data=await r.json();
+    slots=data.slots||[];
+  } catch(e){ slots=Array.from({length:4},(_,i)=>({slot:i+1,occupied:false})); }
+
+  wrap.innerHTML=`
+    <div style="font-size:11px;font-weight:700;color:var(--acc-l);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">
+      📊 Reference Workbooks (${slots.filter(s=>s.occupied).length} / 4 slots filled)
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">
+      SAP SF EC Configuration Workbooks. CSF sheets will be filtered by country scope. Up to 4 workbooks.
+    </div>
+    ${slots.map(s=>`
+      <div class="grnd-file-card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--acc-bg);color:var(--acc-l);border:1px solid var(--acc-b)">Slot ${s.slot}</span>
+          ${s.occupied
+            ? `<span class="grnd-file-name" style="flex:1;font-size:12px">${s.file_name}</span>
+               <span style="font-size:10px;color:var(--muted)">${(s.size_kb||0).toFixed(1)} KB</span>`
+            : `<span style="font-size:12px;color:var(--muted);flex:1">Empty</span>`
+          }
+        </div>
+        ${s.occupied ? `
+          <div style="display:flex;gap:6px">
+            <button class="casc-lib-btn" onclick="wbSlotDelete(${s.slot})" style="border-color:var(--red-b);color:var(--red)">🗑 Delete</button>
+          </div>` : ''}
+        <div class="grnd-upload-zone" style="margin-top:8px;padding:12px"
+             onclick="document.getElementById('wbSlotIn_${s.slot}').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="event.preventDefault();wbSlotUpload(${s.slot},event.dataTransfer.files[0])">
+          <div class="grnd-upload-zone-txt">📎 ${s.occupied?'Replace':'Upload'} workbook for slot ${s.slot}</div>
+          <div id="wbSlotLabel_${s.slot}" style="font-size:11px;color:var(--green);margin-top:4px;font-weight:600"></div>
+        </div>
+        <input type="file" id="wbSlotIn_${s.slot}" accept=".xlsx,.xls" onchange="wbSlotUpload(${s.slot},this.files[0])">
+      </div>`).join('')}`;
+}
+
+async function wbSlotUpload(slot, file){
+  if(!file) return;
+  document.getElementById(`wbSlotLabel_${slot}`).textContent='⏳ Uploading…';
+  const content=await toBase64(file);
+  const ext=(file.name.split('.').pop()||'xlsx').toLowerCase();
+  try {
+    const r=await fetch(`${srv()}/admin/workbook-slots/upload`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({slot,content,name:file.name,ext,username:'admin'}),
+    });
+    if(!r.ok) throw new Error('Server '+r.status);
+    showToast(`✓ Slot ${slot} uploaded: ${file.name}`);
+    await _grndRenderWorkbookSlots();
+    // Update grounding graph node to show grounded
+    if(_grndCy){
+      const n=_grndCy.getElementById(WORKBOOK_NODE_ID);
+      if(n.length){ n.data('grounded',true); _grndCy.style().update(); }
+    }
+  } catch(e){ showToast('⚠ Upload failed: '+e.message,'error'); document.getElementById(`wbSlotLabel_${slot}`).textContent=''; }
+}
+
+async function wbSlotDelete(slot){
+  if(!confirm(`Delete workbook in slot ${slot}?`)) return;
+  try {
+    await fetch(`${srv()}/admin/workbook-slots/${slot}`,{method:'DELETE'});
+    showToast(`✓ Slot ${slot} deleted`);
+    await _grndRenderWorkbookSlots();
+  } catch(e){ showToast('⚠ Delete failed','error'); }
+}
+
+function grndCloseDrawer(){
+  document.getElementById('grndDrawer').classList.remove('open');
+  _stopNeonPulse();
+  _grndActiveNode=null;
+}
+
+function _startNeonPulse(nodes){
+  _stopNeonPulse();
+  if(!nodes||!nodes.length) return;
+  let phase=0;
+  _grndPulseTimer=setInterval(()=>{
+    phase=(phase+1)%2;
+    nodes.forEach(n=>{ n.removeClass('highlighted'); if(phase) n.addClass('highlighted'); });
+  },600);
+}
+
+function _stopNeonPulse(){
+  if(_grndPulseTimer){ clearInterval(_grndPulseTimer); _grndPulseTimer=null; }
+  if(_grndCy) _grndCy.nodes('.highlighted').removeClass('highlighted');
+}
+
+function groundingToggleFullscreen(){
+  const w=document.getElementById('grndGraphWrap');
+  w.classList.toggle('fullscreen');
+  if(_grndCy) setTimeout(()=>_grndCy.fit(),100);
+}
+
+async function groundingHandleFile(file){
+  if(!file||!_grndActiveNode) return;
+  document.getElementById('grndUploadLabel').textContent='⏳ Uploading…';
+  const encoded=await encodeFile(file);
+  try {
+    const r=await fetch(`${srv()}/admin/grounding/upload`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({nodeId:_grndActiveNode.id(),fileName:file.name,fileData:encoded}),
+    });
+    if(!r.ok) throw new Error('Server '+r.status);
+    document.getElementById('grndUploadLabel').textContent='✓ '+file.name;
+    showToast('✓ Reference file uploaded');
+    _grndActiveNode.data('grounded',true); _grndActiveNode.data('fileName',file.name);
+    _grndCy.style().update();
+    document.getElementById('grndStatusSummary').textContent='Refreshing…';
+    await groundingLoadStatus();
+    _grndOpenDrawer(_grndCy.getElementById(_grndActiveNode.id()));
+  } catch(e){ showToast('⚠ Upload failed: '+e.message,'error'); document.getElementById('grndUploadLabel').textContent=''; }
+}
+
+async function groundingDelete(){
+  if(!_grndActiveNode){ return; }
+  const nodeId=_grndActiveNode.id();
+  if(!confirm(`Delete grounding file for "${_grndActiveNode.data('label')}"?`)) return;
+  try {
+    await fetch(`${srv()}/admin/grounding/${encodeURIComponent(nodeId)}`,{method:'DELETE'});
+    showToast('✓ File deleted');
+    grndCloseDrawer();
+    await groundingLoadStatus();
+  } catch(e){ showToast('⚠ Delete failed','error'); }
+}
+
+// ════════════════════════════════════════════════
+// ADMIN — TEMPLATE CONFIG
+// ════════════════════════════════════════════════
+let _tmplRefFile=null, _tmplRefStatus=null;
+
+function adminLoadTemplate(){
+  const sel=document.getElementById('adminTmplSelect').value;
+  if(!sel){ document.getElementById('tmplEditor').style.display='none'; return; }
+  document.getElementById('tmplEditorName').textContent=sel;
+  document.getElementById('tmplEditor').style.display='block';
+  document.getElementById('tmplSavedIndicator').classList.remove('show');
+  _tmplRefFile=null;
+  document.getElementById('tmplRefChosen').textContent='';
+  document.getElementById('tmplRefDZ').classList.remove('filled');
+
+  const configs=getConfigs();
+  const c=configs[sel]||{};
+  document.getElementById('tmplSystemPrompt').value=c.systemPrompt||'';
+
+  const existingRef=document.getElementById('tmplExistingRef');
+  const existingRefTxt=document.getElementById('tmplExistingRefTxt');
+  if(c.refFileName){
+    existingRef.style.display='flex';
+    existingRefTxt.textContent=`Saved: ${c.refFileName}`;
+  } else {
+    existingRef.style.display='none';
+  }
+}
+
+function tmplRefSet(file){
+  if(!file) return;
+  _tmplRefFile=file;
+  document.getElementById('tmplRefChosen').textContent='✓ '+file.name;
+  document.getElementById('tmplRefDZ').classList.add('filled');
+}
+
+async function adminSaveTemplate(){
+  const sel=document.getElementById('adminTmplSelect').value;
+  if(!sel){ showToast('⚠ No template selected','error'); return; }
+  const systemPrompt=document.getElementById('tmplSystemPrompt').value.trim();
+  const btn=document.getElementById('tmplSaveBtn');
+  btn.disabled=true; btn.textContent='⏳ Saving…';
+  _tmplRefStatus=null;
+
+  let refEncoded=null, refFileName=null;
+  if(_tmplRefFile){
+    try { refEncoded=await toBase64(_tmplRefFile); refFileName=_tmplRefFile.name; }
+    catch(e){ showToast('⚠ File encoding failed','error'); btn.disabled=false; btn.textContent='💾 Save Template'; return; }
+  }
+
+  // save to server if ref file present
+  if(refEncoded){
+    try {
+      const r=await fetch(`${srv()}/upload-ref`,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({templateType:sel,refData:refEncoded,refFileName}),
+      });
+      if(!r.ok) throw new Error('Server '+r.status);
+      _tmplRefStatus='server';
+    } catch(e){
+      // localStorage fallback for small files
+      if(refEncoded.length<200000){
+        _tmplRefStatus='local';
+      } else {
+        _tmplRefStatus='failed';
+        showToast('⚠ Reference file upload failed — file may be too large','error');
+      }
+    }
+  }
+
+  // save to localStorage
+  const configs=getConfigs();
+  configs[sel]=configs[sel]||{};
+  if(systemPrompt) configs[sel].systemPrompt=systemPrompt;
+  if(refFileName)  configs[sel].refFileName=refFileName;
+  if(_tmplRefStatus==='local'&&refEncoded) configs[sel].refData=refEncoded;
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(configs));
+
+  btn.disabled=false;
+  if(_tmplRefStatus==='failed'){
+    btn.textContent='💾 Save Template';
+  } else {
+    btn.textContent='💾 Save Template';
+    btn.classList.add('save-btn-success');
+    setTimeout(()=>btn.classList.remove('save-btn-success'),2000);
+    const si=document.getElementById('tmplSavedIndicator');
+    si.classList.add('show');
+    setTimeout(()=>si.classList.remove('show'),4000);
+    const msg=_tmplRefStatus==='server'?'✓ Template saved (file on server)':_tmplRefStatus==='local'?'✓ Template saved (file in browser)':'✓ Template saved';
+    showToast(msg);
+    adminLoadTemplate();
+  }
+}
+
+// ════════════════════════════════════════════════
+// OUTER / ADMIN TAB SWITCHING
+// ════════════════════════════════════════════════
+function switchOuter(which){
+  ['user','admin'].forEach(id=>{
+    document.getElementById('outerPanel'+id[0].toUpperCase()+id.slice(1)).classList.toggle('on',id===which);
+    document.getElementById('outerTab'+id[0].toUpperCase()+id.slice(1)).classList.toggle('on',id===which);
+  });
+  if(which==='admin'){
+    switchAdminTab('tmpl');
+    if(!_grndCy && window._cyReady) groundingInit();
+    else if(!_grndCy) window._pendingGrndInit=()=>groundingInit();
+  }
+}
+
+function switchAdminTab(which){
+  ['Tmpl','Ground'].forEach(id=>{
+    document.getElementById('adminTab'+id).classList.toggle('on',id.toLowerCase()===which);
+    document.getElementById('adminPanel'+id).classList.toggle('on',id.toLowerCase()===which);
+  });
+  if(which==='ground' && !_grndCy){
+    if(window._cyReady) groundingInit();
+    else window._pendingGrndInit=()=>groundingInit();
+  }
+}
+
+// ════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', ()=>{
+  pingServer();
+  renderCascDocGrid();
+  // initialise outer panel id references
+  document.getElementById('outerPanelUser').classList.add('on');
+});
+</script>
+</body>
+</html>

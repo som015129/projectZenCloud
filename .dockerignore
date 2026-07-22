@@ -1,0 +1,17 @@
+.git
+.gitignore
+.github
+
+frontend/
+project-zen/
+ProjectZen — Agent Playbook_files/
+ProjectZen Document — Agent Playbook.html
+
+storage/documents.db
+storage/document_store/
+
+middleware/.env
+middleware/=*
+middleware/__pycache__/
+**/__pycache__/
+*.pyc
