@@ -23,6 +23,7 @@ import re
 import json
 import base64
 import struct
+import asyncio
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -32,60 +33,119 @@ from openpyxl.utils import get_column_letter
 
 import anthropic
 
-# ── ISO country codes and common names used in SF workbooks ──────────────────
-# Mapping: country name variants → ISO alpha-3 / alpha-2
-COUNTRY_ALIASES: Dict[str, str] = {
-    "germany": "DEU", "deutschland": "DEU", "deu": "DEU", "de": "DEU",
-    "united kingdom": "GBR", "uk": "GBR", "great britain": "GBR", "gbr": "GBR", "gb": "GBR",
-    "united states": "USA", "us": "USA", "usa": "USA", "united states of america": "USA",
-    "france": "FRA", "fra": "FRA", "fr": "FRA",
-    "netherlands": "NLD", "nld": "NLD", "nl": "NLD", "the netherlands": "NLD",
-    "australia": "AUS", "aus": "AUS", "au": "AUS",
-    "singapore": "SGP", "sgp": "SGP", "sg": "SGP",
-    "india": "IND", "ind": "IND", "in": "IND",
-    "japan": "JPN", "jpn": "JPN", "jp": "JPN",
-    "canada": "CAN", "can": "CAN", "ca": "CAN",
-    "china": "CHN", "chn": "CHN", "cn": "CHN", "prc": "CHN",
-    "brazil": "BRA", "bra": "BRA", "br": "BRA",
-    "mexico": "MEX", "mex": "MEX", "mx": "MEX",
-    "spain": "ESP", "esp": "ESP", "es": "ESP",
-    "italy": "ITA", "ita": "ITA", "it": "ITA",
-    "sweden": "SWE", "swe": "SWE", "se": "SWE",
-    "norway": "NOR", "nor": "NOR", "no": "NOR",
-    "denmark": "DNK", "dnk": "DNK", "dk": "DNK",
-    "finland": "FIN", "fin": "FIN", "fi": "FIN",
-    "switzerland": "CHE", "che": "CHE", "ch": "CHE",
-    "austria": "AUT", "aut": "AUT", "at": "AUT",
-    "belgium": "BEL", "bel": "BEL", "be": "BEL",
-    "poland": "POL", "pol": "POL", "pl": "POL",
-    "south africa": "ZAF", "zaf": "ZAF", "za": "ZAF",
-    "new zealand": "NZL", "nzl": "NZL", "nz": "NZL",
-    "malaysia": "MYS", "mys": "MYS", "my": "MYS",
-    "thailand": "THA", "tha": "THA", "th": "THA",
-    "indonesia": "IDN", "idn": "IDN", "id": "IDN",
-    "philippines": "PHL", "phl": "PHL", "ph": "PHL",
-    "hong kong": "HKG", "hkg": "HKG", "hk": "HKG",
-    "taiwan": "TWN", "twn": "TWN", "tw": "TWN",
-    "south korea": "KOR", "kor": "KOR", "kr": "KOR", "korea": "KOR",
-    "uae": "ARE", "are": "ARE", "ae": "ARE", "united arab emirates": "ARE",
-    "saudi arabia": "SAU", "sau": "SAU", "sa": "SAU",
-    "israel": "ISR", "isr": "ISR", "il": "ISR",
-    "turkey": "TUR", "tur": "TUR", "tr": "TUR",
-    "russia": "RUS", "rus": "RUS", "ru": "RUS",
-    "czech republic": "CZE", "czechia": "CZE", "cze": "CZE", "cz": "CZE",
-    "hungary": "HUN", "hun": "HUN", "hu": "HUN",
-    "romania": "ROU", "rou": "ROU", "ro": "ROU",
-    "portugal": "PRT", "prt": "PRT", "pt": "PRT",
-    "greece": "GRC", "grc": "GRC", "gr": "GRC",
-    "ireland": "IRL", "irl": "IRL", "ie": "IRL",
-    "colombia": "COL", "col": "COL", "co": "COL",
-    "argentina": "ARG", "arg": "ARG", "ar": "ARG",
-    "chile": "CHL", "chl": "CHL", "cl": "CHL",
-    "peru": "PER", "per": "PER", "pe": "PER",
-    "egypt": "EGY", "egy": "EGY", "eg": "EGY",
-    "nigeria": "NGA", "nga": "NGA", "ng": "NGA",
-    "kenya": "KEN", "ken": "KEN", "ke": "KEN",
+# ── ISO 3166-1 country reference (alpha-2, alpha-3, primary name) ────────────
+# Full ISO country list — SAP SF Employee Central ships 100+ localizations, so
+# detection must not be limited to a hand-picked subset (that previously
+# caused most in-scope countries to be silently dropped during workbook scan).
+_ISO_COUNTRIES: List[Tuple[str, str, str]] = [
+    ("AF", "AFG", "Afghanistan"), ("AL", "ALB", "Albania"), ("DZ", "DZA", "Algeria"),
+    ("AS", "ASM", "American Samoa"), ("AD", "AND", "Andorra"), ("AO", "AGO", "Angola"),
+    ("AI", "AIA", "Anguilla"), ("AG", "ATG", "Antigua and Barbuda"), ("AR", "ARG", "Argentina"),
+    ("AM", "ARM", "Armenia"), ("AW", "ABW", "Aruba"), ("AU", "AUS", "Australia"),
+    ("AT", "AUT", "Austria"), ("AZ", "AZE", "Azerbaijan"), ("BS", "BHS", "Bahamas"),
+    ("BH", "BHR", "Bahrain"), ("BD", "BGD", "Bangladesh"), ("BB", "BRB", "Barbados"),
+    ("BY", "BLR", "Belarus"), ("BE", "BEL", "Belgium"), ("BZ", "BLZ", "Belize"),
+    ("BJ", "BEN", "Benin"), ("BM", "BMU", "Bermuda"), ("BT", "BTN", "Bhutan"),
+    ("BO", "BOL", "Bolivia"), ("BA", "BIH", "Bosnia and Herzegovina"), ("BW", "BWA", "Botswana"),
+    ("BR", "BRA", "Brazil"), ("BN", "BRN", "Brunei"), ("BG", "BGR", "Bulgaria"),
+    ("BF", "BFA", "Burkina Faso"), ("BI", "BDI", "Burundi"), ("KH", "KHM", "Cambodia"),
+    ("CM", "CMR", "Cameroon"), ("CA", "CAN", "Canada"), ("CV", "CPV", "Cape Verde"),
+    ("KY", "CYM", "Cayman Islands"), ("CF", "CAF", "Central African Republic"), ("TD", "TCD", "Chad"),
+    ("CL", "CHL", "Chile"), ("CN", "CHN", "China"), ("CO", "COL", "Colombia"),
+    ("KM", "COM", "Comoros"), ("CG", "COG", "Congo"), ("CD", "COD", "Congo, Democratic Republic of the"),
+    ("CR", "CRI", "Costa Rica"), ("CI", "CIV", "Cote d'Ivoire"), ("HR", "HRV", "Croatia"),
+    ("CU", "CUB", "Cuba"), ("CW", "CUW", "Curacao"), ("CY", "CYP", "Cyprus"),
+    ("CZ", "CZE", "Czech Republic"), ("DK", "DNK", "Denmark"), ("DJ", "DJI", "Djibouti"),
+    ("DM", "DMA", "Dominica"), ("DO", "DOM", "Dominican Republic"), ("EC", "ECU", "Ecuador"),
+    ("EG", "EGY", "Egypt"), ("SV", "SLV", "El Salvador"), ("GQ", "GNQ", "Equatorial Guinea"),
+    ("ER", "ERI", "Eritrea"), ("EE", "EST", "Estonia"), ("SZ", "SWZ", "Eswatini"),
+    ("ET", "ETH", "Ethiopia"), ("FJ", "FJI", "Fiji"), ("FI", "FIN", "Finland"),
+    ("FR", "FRA", "France"), ("GA", "GAB", "Gabon"), ("GM", "GMB", "Gambia"),
+    ("GE", "GEO", "Georgia"), ("DE", "DEU", "Germany"), ("GH", "GHA", "Ghana"),
+    ("GI", "GIB", "Gibraltar"), ("GR", "GRC", "Greece"), ("GL", "GRL", "Greenland"),
+    ("GD", "GRD", "Grenada"), ("GU", "GUM", "Guam"), ("GT", "GTM", "Guatemala"),
+    ("GG", "GGY", "Guernsey"), ("GN", "GIN", "Guinea"), ("GW", "GNB", "Guinea-Bissau"),
+    ("GY", "GUY", "Guyana"), ("HT", "HTI", "Haiti"), ("HN", "HND", "Honduras"),
+    ("HK", "HKG", "Hong Kong"), ("HU", "HUN", "Hungary"), ("IS", "ISL", "Iceland"),
+    ("IN", "IND", "India"), ("ID", "IDN", "Indonesia"), ("IR", "IRN", "Iran"),
+    ("IQ", "IRQ", "Iraq"), ("IE", "IRL", "Ireland"), ("IM", "IMN", "Isle of Man"),
+    ("IL", "ISR", "Israel"), ("IT", "ITA", "Italy"), ("JM", "JAM", "Jamaica"),
+    ("JP", "JPN", "Japan"), ("JE", "JEY", "Jersey"), ("JO", "JOR", "Jordan"),
+    ("KZ", "KAZ", "Kazakhstan"), ("KE", "KEN", "Kenya"), ("KI", "KIR", "Kiribati"),
+    ("KP", "PRK", "North Korea"), ("KR", "KOR", "South Korea"), ("KW", "KWT", "Kuwait"),
+    ("KG", "KGZ", "Kyrgyzstan"), ("LA", "LAO", "Laos"), ("LV", "LVA", "Latvia"),
+    ("LB", "LBN", "Lebanon"), ("LS", "LSO", "Lesotho"), ("LR", "LBR", "Liberia"),
+    ("LY", "LBY", "Libya"), ("LI", "LIE", "Liechtenstein"), ("LT", "LTU", "Lithuania"),
+    ("LU", "LUX", "Luxembourg"), ("MO", "MAC", "Macao"), ("MG", "MDG", "Madagascar"),
+    ("MW", "MWI", "Malawi"), ("MY", "MYS", "Malaysia"), ("MV", "MDV", "Maldives"),
+    ("ML", "MLI", "Mali"), ("MT", "MLT", "Malta"), ("MH", "MHL", "Marshall Islands"),
+    ("MR", "MRT", "Mauritania"), ("MU", "MUS", "Mauritius"), ("MX", "MEX", "Mexico"),
+    ("FM", "FSM", "Micronesia"), ("MD", "MDA", "Moldova"), ("MC", "MCO", "Monaco"),
+    ("MN", "MNG", "Mongolia"), ("ME", "MNE", "Montenegro"), ("MA", "MAR", "Morocco"),
+    ("MZ", "MOZ", "Mozambique"), ("MM", "MMR", "Myanmar"), ("NA", "NAM", "Namibia"),
+    ("NR", "NRU", "Nauru"), ("NP", "NPL", "Nepal"), ("NL", "NLD", "Netherlands"),
+    ("NC", "NCL", "New Caledonia"), ("NZ", "NZL", "New Zealand"), ("NI", "NIC", "Nicaragua"),
+    ("NE", "NER", "Niger"), ("NG", "NGA", "Nigeria"), ("MK", "MKD", "North Macedonia"),
+    ("NO", "NOR", "Norway"), ("OM", "OMN", "Oman"), ("PK", "PAK", "Pakistan"),
+    ("PW", "PLW", "Palau"), ("PS", "PSE", "Palestine"), ("PA", "PAN", "Panama"),
+    ("PG", "PNG", "Papua New Guinea"), ("PY", "PRY", "Paraguay"), ("PE", "PER", "Peru"),
+    ("PH", "PHL", "Philippines"), ("PL", "POL", "Poland"), ("PT", "PRT", "Portugal"),
+    ("PR", "PRI", "Puerto Rico"), ("QA", "QAT", "Qatar"), ("RO", "ROU", "Romania"),
+    ("RU", "RUS", "Russia"), ("RW", "RWA", "Rwanda"), ("KN", "KNA", "Saint Kitts and Nevis"),
+    ("LC", "LCA", "Saint Lucia"), ("VC", "VCT", "Saint Vincent and the Grenadines"),
+    ("WS", "WSM", "Samoa"), ("SM", "SMR", "San Marino"), ("ST", "STP", "Sao Tome and Principe"),
+    ("SA", "SAU", "Saudi Arabia"), ("SN", "SEN", "Senegal"), ("RS", "SRB", "Serbia"),
+    ("SC", "SYC", "Seychelles"), ("SL", "SLE", "Sierra Leone"), ("SG", "SGP", "Singapore"),
+    ("SK", "SVK", "Slovakia"), ("SI", "SVN", "Slovenia"), ("SB", "SLB", "Solomon Islands"),
+    ("SO", "SOM", "Somalia"), ("ZA", "ZAF", "South Africa"), ("SS", "SSD", "South Sudan"),
+    ("ES", "ESP", "Spain"), ("LK", "LKA", "Sri Lanka"), ("SD", "SDN", "Sudan"),
+    ("SR", "SUR", "Suriname"), ("SE", "SWE", "Sweden"), ("CH", "CHE", "Switzerland"),
+    ("SY", "SYR", "Syria"), ("TW", "TWN", "Taiwan"), ("TJ", "TJK", "Tajikistan"),
+    ("TZ", "TZA", "Tanzania"), ("TH", "THA", "Thailand"), ("TL", "TLS", "Timor-Leste"),
+    ("TG", "TGO", "Togo"), ("TO", "TON", "Tonga"), ("TT", "TTO", "Trinidad and Tobago"),
+    ("TN", "TUN", "Tunisia"), ("TR", "TUR", "Turkey"), ("TM", "TKM", "Turkmenistan"),
+    ("TV", "TUV", "Tuvalu"), ("UG", "UGA", "Uganda"), ("UA", "UKR", "Ukraine"),
+    ("AE", "ARE", "United Arab Emirates"), ("GB", "GBR", "United Kingdom"), ("US", "USA", "United States"),
+    ("UY", "URY", "Uruguay"), ("UZ", "UZB", "Uzbekistan"), ("VU", "VUT", "Vanuatu"),
+    ("VA", "VAT", "Vatican City"), ("VE", "VEN", "Venezuela"), ("VN", "VNM", "Vietnam"),
+    ("VG", "VGB", "British Virgin Islands"), ("VI", "VIR", "U.S. Virgin Islands"), ("YE", "YEM", "Yemen"),
+    ("ZM", "ZMB", "Zambia"), ("ZW", "ZWE", "Zimbabwe"),
+]
+
+# Colloquial / historical name variants not covered by the primary ISO name above.
+_EXTRA_COUNTRY_ALIASES: Dict[str, str] = {
+    "uk": "GBR", "great britain": "GBR", "britain": "GBR",
+    "united states of america": "USA", "america": "USA",
+    "prc": "CHN", "mainland china": "CHN",
+    "korea": "KOR", "republic of korea": "KOR", "dprk": "PRK",
+    "the netherlands": "NLD", "holland": "NLD",
+    "ivory coast": "CIV", "czechia": "CZE", "swaziland": "SWZ", "burma": "MMR",
+    "dr congo": "COD", "drc": "COD", "zaire": "COD", "republic of the congo": "COG",
+    "macedonia": "MKD", "fyrom": "MKD", "vatican": "VAT", "holy see": "VAT",
+    "russian federation": "RUS", "syrian arab republic": "SYR", "lao pdr": "LAO",
+    "brunei darussalam": "BRN", "viet nam": "VNM", "east timor": "TLS",
+    "palestinian territories": "PSE",
 }
+
+
+def _build_country_aliases() -> Dict[str, str]:
+    aliases: Dict[str, str] = {}
+    for alpha2, alpha3, name in _ISO_COUNTRIES:
+        aliases[name.lower()] = alpha3
+        aliases[alpha2.lower()] = alpha3
+        aliases[alpha3.lower()] = alpha3
+    aliases.update(_EXTRA_COUNTRY_ALIASES)
+    return aliases
+
+
+# Mapping: country name variants → ISO alpha-3 / alpha-2
+COUNTRY_ALIASES: Dict[str, str] = _build_country_aliases()
+
+# All ISO alpha-3 codes as a single alternation, for spotting an embedded
+# country code in a sheet tab name (e.g. "DEU_Payroll") — shared by
+# CSF_TAB_RE below and the tab-name fallback in detect_countries_in_workbooks.
+_ISO3_ALTERNATION = '|'.join(sorted({alpha3 for _, alpha3, _ in _ISO_COUNTRIES}))
+ISO3_TAB_RE = re.compile(r'\b(' + _ISO3_ALTERNATION + r')\b')
 
 # Tab name patterns that definitively indicate CSF (country-specific) sheets
 CSF_TAB_PATTERNS = [
@@ -95,7 +155,7 @@ CSF_TAB_PATTERNS = [
     r'\bBenefits?\b', r'\bTime[\s_-]?Off\b',
     r'\bLeave[\s_-]?',
     # ISO 3-letter codes in tab name
-    r'\b(DEU|GBR|USA|FRA|NLD|AUS|SGP|IND|JPN|CAN|CHN|BRA|MEX|ESP|ITA|SWE|NOR|DNK|FIN|CHE|AUT|BEL|POL|ZAF|NZL|MYS|THA|IDN|PHL|HKG|TWN|KOR|ARE|SAU|ISR|TUR|RUS|CZE|HUN|ROU|PRT|GRC|IRL|COL|ARG|CHL|PER|EGY|NGA|KEN)\b',
+    r'\b(?:' + _ISO3_ALTERNATION + r')\b',
 ]
 CSF_TAB_RE = re.compile('|'.join(CSF_TAB_PATTERNS), re.IGNORECASE)
 
@@ -265,20 +325,9 @@ def _extract_unicode_strings(raw_bytes: bytes, min_len: int = 4) -> str:
 
 # Canonical display name per ISO-3 code (for countries detected directly from
 # workbook data, where we only have a code/alias and need something to show).
-ISO3_TO_NAME: Dict[str, str] = {
-    "DEU": "Germany", "GBR": "United Kingdom", "USA": "United States", "FRA": "France",
-    "NLD": "Netherlands", "AUS": "Australia", "SGP": "Singapore", "IND": "India",
-    "JPN": "Japan", "CAN": "Canada", "CHN": "China", "BRA": "Brazil", "MEX": "Mexico",
-    "ESP": "Spain", "ITA": "Italy", "SWE": "Sweden", "NOR": "Norway", "DNK": "Denmark",
-    "FIN": "Finland", "CHE": "Switzerland", "AUT": "Austria", "BEL": "Belgium",
-    "POL": "Poland", "ZAF": "South Africa", "NZL": "New Zealand", "MYS": "Malaysia",
-    "THA": "Thailand", "IDN": "Indonesia", "PHL": "Philippines", "HKG": "Hong Kong",
-    "TWN": "Taiwan", "KOR": "South Korea", "ARE": "United Arab Emirates", "SAU": "Saudi Arabia",
-    "ISR": "Israel", "TUR": "Turkey", "RUS": "Russia", "CZE": "Czech Republic",
-    "HUN": "Hungary", "ROU": "Romania", "PRT": "Portugal", "GRC": "Greece",
-    "IRL": "Ireland", "COL": "Colombia", "ARG": "Argentina", "CHL": "Chile",
-    "PER": "Peru", "EGY": "Egypt", "NGA": "Nigeria", "KEN": "Kenya",
-}
+# Derived from the same master list COUNTRY_ALIASES is built from, so every
+# code that can be *detected* also has a display name.
+ISO3_TO_NAME: Dict[str, str] = {alpha3: name for _, alpha3, name in _ISO_COUNTRIES}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -513,10 +562,7 @@ def detect_countries_in_workbooks(slot_files: List[Dict], refs_dir: Path) -> Lis
                     if iso3:
                         found[iso3] = found.get(iso3, 0) + 1
             else:
-                tab_match = re.search(
-                    r'\b(DEU|GBR|USA|FRA|NLD|AUS|SGP|IND|JPN|CAN|CHN|BRA|MEX|ESP|ITA|SWE|NOR|DNK|FIN|CHE|AUT|BEL|POL|ZAF|NZL|MYS|THA|IDN|PHL|HKG|TWN|KOR|ARE|SAU|ISR|TUR|RUS|CZE|HUN|ROU|PRT|GRC|IRL|COL|ARG|CHL|PER|EGY|NGA|KEN)\b',
-                    sheet_name.upper(),
-                )
+                tab_match = ISO3_TAB_RE.search(sheet_name.upper())
                 if tab_match:
                     iso3 = tab_match.group(1)
                     found[iso3] = found.get(iso3, 0) + 1
@@ -700,32 +746,8 @@ def filter_workbook(
     return out_wb
 
 
-async def generate_filtered_workbook(
-    slot_files: List[Dict],  # [{"slot": 1, "path": "...", "file_name": "...", "ref_id": "..."}, ...]
-    in_scope_countries: List[Dict[str, str]],
-    refs_dir: Path,
-) -> Optional[bytes]:
-    """
-    Load each slot file, filter CSF sheets to in-scope countries,
-    and produce a combined .xlsx output as bytes.
-
-    If only one slot, output is the filtered workbook directly.
-    If multiple slots, create a combined workbook with a summary sheet first,
-    then all filtered sheets from each slot (prefixed with slot number if name collides).
-
-    Returns raw xlsx bytes or None on failure.
-    """
-    if not slot_files or not in_scope_countries:
-        return None
-
-    country_labels = ", ".join(c.get("iso3", c.get("name", "")) for c in in_scope_countries)
-    print(f"[workbook_processor] Generating for countries: {country_labels}")
-
-    out_wb = openpyxl.Workbook()
-    out_wb.remove(out_wb.active)
-
-    # ── Summary sheet ────────────────────────────────────────────────────────
-    summary = out_wb.create_sheet("_Summary")
+def _add_summary_sheet(out_wb: openpyxl.Workbook, in_scope_countries: List[Dict[str, str]], source_count: int) -> None:
+    summary = out_wb.create_sheet("_Summary", 0)
     summary["A1"] = "Configuration Workbook — Country-Filtered Output"
     summary["A1"].font = Font(bold=True, size=14)
     summary["A3"] = "In-Scope Countries:"
@@ -733,30 +755,73 @@ async def generate_filtered_workbook(
     for i, c in enumerate(in_scope_countries, start=4):
         summary[f"A{i}"] = c.get("name", "")
         summary[f"B{i}"] = c.get("iso3", "")
-    summary["A3"].font = Font(bold=True)
     summary.column_dimensions["A"].width = 30
     summary.column_dimensions["B"].width = 10
 
     import datetime as dt_mod
     summary[f"A{len(in_scope_countries)+5}"] = f"Generated: {dt_mod.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
-    summary[f"A{len(in_scope_countries)+6}"] = f"Source workbooks: {len(slot_files)}"
+    summary[f"A{len(in_scope_countries)+6}"] = f"Source workbooks: {source_count}"
 
+
+def _find_slot_file(slot_info: Dict, refs_dir: Path) -> Optional[Path]:
+    ref_id = slot_info.get("ref_id", "")
+    for candidate in refs_dir.glob(f"{ref_id}.*"):
+        return candidate
+    return None
+
+
+def _generate_filtered_workbook_sync(
+    slot_files: List[Dict],
+    in_scope_countries: List[Dict[str, str]],
+    refs_dir: Path,
+) -> Optional[bytes]:
+    """
+    Load each slot file, filter CSF sheets to in-scope countries,
+    and produce a combined .xlsx output as bytes.
+
+    If only one slot, the filtered workbook is used directly (a summary sheet
+    is inserted at the front) — no second cell-by-cell copy pass, since that
+    was doubling the (already expensive, style-preserving) copy work for the
+    common case and could stall the request on large real-world workbooks.
+    If multiple slots, sheets from each are merged into one combined workbook
+    (prefixed with slot number if name collides).
+
+    Returns raw xlsx bytes or None on failure.
+    """
+    country_labels = ", ".join(c.get("iso3", c.get("name", "")) for c in in_scope_countries)
+    print(f"[workbook_processor] Generating for countries: {country_labels}")
+
+    # ── Single slot: filter in place, skip the redundant second copy ──────────
+    if len(slot_files) == 1:
+        slot_info = slot_files[0]
+        file_path = _find_slot_file(slot_info, refs_dir)
+        if not file_path or not file_path.exists():
+            print(f"  [slot {slot_info.get('slot', 1)}] file not found: {slot_info.get('ref_id', '')}")
+            return None
+
+        src_wb = load_workbook_from_path(str(file_path))
+        if not src_wb:
+            return None
+
+        out_wb = filter_workbook(src_wb, in_scope_countries, label=f"Slot {slot_info.get('slot', 1)}")
+        _add_summary_sheet(out_wb, in_scope_countries, source_count=1)
+
+        buf = io.BytesIO()
+        out_wb.save(buf)
+        return buf.getvalue()
+
+    # ── Multiple slots: merge filtered sheets from each into one workbook ─────
+    out_wb = openpyxl.Workbook()
+    out_wb.remove(out_wb.active)
+    _add_summary_sheet(out_wb, in_scope_countries, source_count=len(slot_files))
     existing_sheet_names: set = {"_Summary"}
 
     for slot_info in slot_files:
         slot_num  = slot_info.get("slot", 1)
-        file_name = slot_info.get("file_name", f"Workbook_{slot_num}")
-        ref_id    = slot_info.get("ref_id", "")
-        file_ext  = slot_info.get("file_ext", "xlsx")
-
-        # Find file on disk
-        file_path = None
-        for candidate in refs_dir.glob(f"{ref_id}.*"):
-            file_path = candidate
-            break
+        file_path = _find_slot_file(slot_info, refs_dir)
 
         if not file_path or not file_path.exists():
-            print(f"  [slot {slot_num}] file not found: {ref_id}")
+            print(f"  [slot {slot_num}] file not found: {slot_info.get('ref_id', '')}")
             continue
 
         src_wb = load_workbook_from_path(str(file_path))
@@ -768,11 +833,7 @@ async def generate_filtered_workbook(
         # Copy sheets into combined workbook
         for sheet_name in filtered_wb.sheetnames:
             # Handle name collision when multiple slots have same sheet names
-            dest_name = sheet_name
-            if len(slot_files) > 1:
-                prefix = f"S{slot_num}_"
-                dest_name = (prefix + sheet_name)[:31]
-            # Ensure uniqueness
+            dest_name = f"S{slot_num}_{sheet_name}"[:31]
             if dest_name in existing_sheet_names:
                 dest_name = (dest_name[:28] + f"_{slot_num}")[:31]
             existing_sheet_names.add(dest_name)
@@ -805,3 +866,23 @@ async def generate_filtered_workbook(
     buf = io.BytesIO()
     out_wb.save(buf)
     return buf.getvalue()
+
+
+async def generate_filtered_workbook(
+    slot_files: List[Dict],  # [{"slot": 1, "path": "...", "file_name": "...", "ref_id": "..."}, ...]
+    in_scope_countries: List[Dict[str, str]],
+    refs_dir: Path,
+) -> Optional[bytes]:
+    """
+    Async wrapper around _generate_filtered_workbook_sync.
+
+    The actual filtering/copying is synchronous, CPU-bound openpyxl work that
+    can take a long time on real-world multi-sheet, multi-thousand-row SF EC
+    workbooks. Running it inline in the event loop would block the single
+    uvicorn worker for the whole duration — starving health checks and every
+    other in-flight request, and risking the connection being dropped before
+    a response is ever sent. asyncio.to_thread moves it off the event loop.
+    """
+    if not slot_files or not in_scope_countries:
+        return None
+    return await asyncio.to_thread(_generate_filtered_workbook_sync, slot_files, in_scope_countries, refs_dir)

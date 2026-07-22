@@ -1262,7 +1262,12 @@ async def route_generate_workbook(req: GenerateWorkbookRequest):
             "file_ext":  s["file_ext"],
         })
 
-    xlsx_bytes = await generate_filtered_workbook(slot_files, req.countries, REFS_DIR)
+    try:
+        xlsx_bytes = await generate_filtered_workbook(slot_files, req.countries, REFS_DIR)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, f"Workbook generation failed: {e}")
     if not xlsx_bytes:
         raise HTTPException(500, "Workbook generation failed — check server logs")
 
