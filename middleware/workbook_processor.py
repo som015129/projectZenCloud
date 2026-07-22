@@ -379,11 +379,18 @@ def _find_country_column(ws) -> Optional[int]:
 
 
 def _get_header_row(ws) -> int:
-    """Return the 1-based row index of the header row (usually 1 or 2)."""
-    for row in ws.iter_rows(min_row=1, max_row=4):
+    """
+    Return the 1-based row index of the header row (usually 1 or 2).
+
+    Row index comes from enumerate(), not any individual cell's .row —
+    a row's first element can be a lightweight EmptyCell placeholder
+    (read-only mode's stand-in for a blank position within a row's
+    populated range), which doesn't carry a .row attribute.
+    """
+    for row_idx, row in enumerate(ws.iter_rows(min_row=1, max_row=4), start=1):
         non_empty = [c.value for c in row[:10] if c.value is not None and str(c.value).strip()]
         if len(non_empty) >= 2:
-            return row[0].row if row else 1
+            return row_idx
     return 1
 
 
@@ -412,14 +419,17 @@ def _stream_real_rows(ws, max_gap: int = 10000):
     stray cell at row 1,048,573 — a >1,000,000-row gap that's cut here.
     """
     empty_streak = 0
-    for row in ws.iter_rows():
+    start_row = getattr(ws, "min_row", None) or 1
+    for row_idx, row in enumerate(ws.iter_rows(), start=start_row):
         # Read-only mode yields lightweight EmptyCell placeholders for
         # blank positions within a row's populated range — they lack
-        # .has_style entirely (only ReadOnlyCell/Cell have it).
+        # .has_style (and .row) entirely (only ReadOnlyCell/Cell have
+        # them), which is why row_idx comes from enumerate() above, not
+        # from any individual cell's .row attribute.
         populated = [(c.column, c) for c in row if c.value is not None or getattr(c, "has_style", False)]
         if populated:
             empty_streak = 0
-            yield row[0].row, populated
+            yield row_idx, populated
         else:
             empty_streak += 1
             if empty_streak > max_gap:
