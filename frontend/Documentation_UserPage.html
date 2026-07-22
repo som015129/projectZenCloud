@@ -2287,10 +2287,21 @@ function groundingInit(){
   groundingLoadStatus();
 }
 
+let _grndGraphData=null;
+
 async function groundingLoadStatus(){
+  // Live knowledge graph (real node ids/labels) — same source of truth as the backend.
+  if(!_grndGraphData){
+    try {
+      const gr=await fetch(`${srv()}/cascade/graph-data`);
+      const gd=await gr.json();
+      if(gd.success) _grndGraphData=gd.data;
+    } catch(e){ /* falls back to the local CASCADE_DOCS/CASCADE_EDGES below */ }
+  }
   try {
     const r=await fetch(`${srv()}/admin/grounding`);
-    _grndStatus=await r.json();
+    const j=await r.json();
+    _grndStatus = j.nodes || [];   // API returns {success, nodes, total, grounded_count}
   } catch(e){ _grndStatus=[]; }
   groundingBuildGraph();
 }
@@ -2300,26 +2311,28 @@ function groundingBuildGraph(){
   if(!container||!window._cyReady) return;
   if(_grndCy){ _grndCy.destroy(); _grndCy=null; }
 
-  // build status map — accept both node_id (backend) and nodeId (some APIs)
+  // statusMap keyed by node_id — real shape: {node_id, is_grounded, grounding:{ref_id,file_name,...}|null}
   const statusMap={};
-  (_grndStatus||[]).forEach(s=>{ statusMap[s.node_id||s.nodeId]=s; });
+  (_grndStatus||[]).forEach(s=>{ statusMap[s.node_id]=s; });
 
-  const allNodes=CASCADE_DOCS;
+  const allNodes=(_grndGraphData&&_grndGraphData.nodes)||CASCADE_DOCS;
+  const allEdges=(_grndGraphData&&_grndGraphData.edges)||CASCADE_EDGES;
   const nodeIdSet=new Set(allNodes.map(d=>d.id));
   const elements={ nodes:[], edges:[] };
 
   allNodes.forEach(doc=>{
     const st=statusMap[doc.id];
+    const g=st&&st.grounding;
     elements.nodes.push({ data:{
       id:doc.id, label:doc.label, phase:doc.phase,
-      grounded:!!(st&&(st.fileId||st.file_id)),
-      fileName:st?(st.fileName||st.file_name||''):'',
-      fileId:st?(st.fileId||st.file_id||''):'',
+      grounded:!!(st&&st.is_grounded),
+      fileName:g?(g.file_name||''):'',
+      refId:g?(g.ref_id||''):'',
     }});
   });
 
-  // add edges from CASCADE_EDGES (only between nodes that exist in the graph)
-  CASCADE_EDGES.forEach(e=>{
+  // add edges from the live graph (only between nodes that exist in this graph)
+  allEdges.forEach(e=>{
     if(nodeIdSet.has(e.source)&&nodeIdSet.has(e.target)){
       elements.edges.push({ data:{ id:`${e.source}_${e.target}`, source:e.source, target:e.target }});
     }
@@ -2334,7 +2347,7 @@ function groundingBuildGraph(){
 
   _grndCy.on('tap','node',evt=>{ _grndOpenDrawer(evt.target); });
 
-  const grounded=allNodes.filter(d=>{ const st=statusMap[d.id]; return st&&(st.fileId||st.file_id); }).length;
+  const grounded=allNodes.filter(d=>{ const st=statusMap[d.id]; return st&&st.is_grounded; }).length;
   document.getElementById('grndStatusSummary').textContent=`${grounded} / ${allNodes.length} nodes grounded`;
 }
 
@@ -2386,7 +2399,7 @@ async function _grndOpenDrawer(node){
       document.getElementById('grndFileName').textContent=d.fileName;
       document.getElementById('grndFileMeta').textContent='Reference file attached';
       const dlLink=document.getElementById('grndFileDownload');
-      dlLink.href=`${srv()}/admin/grounding/${encodeURIComponent(d.id)}/download`;
+      dlLink.href=`${srv()}/ref/${encodeURIComponent(d.refId||'')}`;
       dlLink.download=d.fileName;
     } else {
       document.getElementById('grndFileCard').style.display='none';
