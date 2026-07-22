@@ -596,21 +596,28 @@ def detect_countries_in_workbooks(slot_files: List[Dict], refs_dir: Path) -> Lis
             real_max_row, real_max_col = _real_bounds(ws)
 
             if country_col:
-                for row in ws.iter_rows(min_row=header_row + 1, max_row=real_max_row, values_only=True):
-                    if len(row) < country_col:
+                for row_idx, col_cells in _rows_with_real_cells(ws, real_max_row, real_max_col):
+                    if row_idx <= header_row:
                         continue
-                    iso3 = _resolve_iso3(row[country_col - 1])
-                    if iso3:
-                        found[iso3] = found.get(iso3, 0) + 1
+                    for col_idx, cell in col_cells:
+                        if col_idx == country_col:
+                            iso3 = _resolve_iso3(cell.value)
+                            if iso3:
+                                found[iso3] = found.get(iso3, 0) + 1
+                            break
             else:
                 tab_match = ISO3_TAB_RE.search(sheet_name.upper())
                 if tab_match:
                     iso3 = tab_match.group(1)
                     found[iso3] = found.get(iso3, 0) + 1
                 else:
-                    for row in ws.iter_rows(min_row=header_row + 1, max_row=real_max_row, max_col=min(5, real_max_col), values_only=True):
-                        for cv in row:
-                            iso3 = _resolve_iso3(cv)
+                    for row_idx, col_cells in _rows_with_real_cells(ws, real_max_row, real_max_col):
+                        if row_idx <= header_row:
+                            continue
+                        for col_idx, cell in col_cells:
+                            if col_idx > 5:
+                                break
+                            iso3 = _resolve_iso3(cell.value)
                             if iso3:
                                 found[iso3] = found.get(iso3, 0) + 1
 
@@ -681,6 +688,41 @@ def _matches_country(cell_value: Any, in_scope_iso3: set, in_scope_names: set) -
     return False
 
 
+def _rows_with_real_cells(ws, real_max_row: int, real_max_col: int):
+    """
+    Yield (row_idx, [(col_idx, cell), ...]) only for rows that actually
+    contain at least one populated (value or styled) cell, sorted by row
+    then column — built directly from the sheet's sparse, already-
+    materialized `_cells` dict rather than ws.iter_rows().
+
+    ws.iter_rows() always backfills a dense rectangular grid across the
+    full row/col range it's given, even when real content is sparse
+    within it. Verified against a real SF EC "Picklists" sheet: 194,064
+    genuinely populated cells inside a nominally 40,008 x 176 (~7,041,408
+    position) bounding box — iterating that as a dense grid means ~36x
+    more Cell objects created (on both the read and write side) than
+    actually exist, which is enough on its own to make generation take
+    minutes or exhaust memory even after _real_bounds has already cut
+    away a pathological phantom tail.
+    """
+    cells = getattr(ws, "_cells", None)
+    if not cells:
+        for row in ws.iter_rows(max_row=real_max_row, max_col=real_max_col):
+            populated = [(c.column, c) for c in row if c.value is not None or c.has_style]
+            if populated:
+                yield row[0].row, populated
+        return
+
+    by_row: Dict[int, List[Tuple[int, Any]]] = {}
+    for (r, c), cell in cells.items():
+        if r > real_max_row or c > real_max_col:
+            continue
+        by_row.setdefault(r, []).append((c, cell))
+
+    for row_idx in sorted(by_row.keys()):
+        yield row_idx, sorted(by_row[row_idx], key=lambda t: t[0])
+
+
 def filter_workbook(
     source_wb: openpyxl.Workbook,
     in_scope_countries: List[Dict[str, str]],
@@ -709,12 +751,13 @@ def filter_workbook(
         real_max_row, real_max_col = _real_bounds(src_ws)
 
         if info["type"] in ("global", "meta"):
-            # Copy everything within the sheet's real content bounds — not
-            # ws.max_row/max_column, which can be wildly inflated by a single
-            # stray cell far outside the actual data (see _real_bounds).
-            for row in src_ws.iter_rows(max_row=real_max_row, max_col=real_max_col):
-                for cell in row:
-                    dst_cell = dst_ws.cell(row=cell.row, column=cell.column, value=cell.value)
+            # Copy only genuinely populated cells within the sheet's real
+            # content bounds — not a dense ws.max_row x ws.max_column grid,
+            # which can be orders of magnitude larger than actual content
+            # (see _real_bounds and _rows_with_real_cells).
+            for row_idx, col_cells in _rows_with_real_cells(src_ws, real_max_row, real_max_col):
+                for col_idx, cell in col_cells:
+                    dst_cell = dst_ws.cell(row=row_idx, column=col_idx, value=cell.value)
                     if cell.has_style:
                         try:
                             dst_cell.font      = cell.font.copy()
@@ -731,14 +774,12 @@ def filter_workbook(
             out_row_idx  = 0
             kept_rows    = 0
 
-            for src_row in src_ws.iter_rows(max_row=real_max_row, max_col=real_max_col):
-                row_num = src_row[0].row if src_row else 0
-
+            for row_idx, col_cells in _rows_with_real_cells(src_ws, real_max_row, real_max_col):
                 # Always copy rows up to and including header
-                if row_num <= header_row:
+                if row_idx <= header_row:
                     out_row_idx += 1
-                    for cell in src_row:
-                        dst_cell = dst_ws.cell(row=out_row_idx, column=cell.column, value=cell.value)
+                    for col_idx, cell in col_cells:
+                        dst_cell = dst_ws.cell(row=out_row_idx, column=col_idx, value=cell.value)
                         if cell.has_style:
                             try:
                                 dst_cell.font      = cell.font.copy()
@@ -753,12 +794,19 @@ def filter_workbook(
                 # For data rows: check country filter
                 include_row = False
                 if country_col:
-                    cv = src_row[country_col - 1].value if len(src_row) >= country_col else None
+                    cv = None
+                    for col_idx, cell in col_cells:
+                        if col_idx == country_col:
+                            cv = cell.value
+                            break
                     include_row = _matches_country(cv, iso3_set, name_set)
                 else:
-                    # No explicit country column found — check all cells in the row
-                    # for a value matching an in-scope country (conservative: keep if any match)
-                    for cell in src_row[:5]:
+                    # No explicit country column found — check the first 5
+                    # columns of the row for a value matching an in-scope
+                    # country (conservative: keep if any match)
+                    for col_idx, cell in col_cells:
+                        if col_idx > 5:
+                            break
                         if _matches_country(cell.value, iso3_set, name_set):
                             include_row = True
                             break
@@ -766,8 +814,8 @@ def filter_workbook(
                 if include_row:
                     out_row_idx += 1
                     kept_rows += 1
-                    for cell in src_row:
-                        dst_cell = dst_ws.cell(row=out_row_idx, column=cell.column, value=cell.value)
+                    for col_idx, cell in col_cells:
+                        dst_cell = dst_ws.cell(row=out_row_idx, column=col_idx, value=cell.value)
                         if cell.has_style:
                             try:
                                 dst_cell.font      = cell.font.copy()
@@ -886,9 +934,9 @@ def _generate_filtered_workbook_sync(
             dst_ws  = out_wb.create_sheet(title=dest_name)
             real_max_row, real_max_col = _real_bounds(src_ws)
 
-            for row in src_ws.iter_rows(max_row=real_max_row, max_col=real_max_col):
-                for cell in row:
-                    dst_cell = dst_ws.cell(row=cell.row, column=cell.column, value=cell.value)
+            for row_idx, col_cells in _rows_with_real_cells(src_ws, real_max_row, real_max_col):
+                for col_idx, cell in col_cells:
+                    dst_cell = dst_ws.cell(row=row_idx, column=col_idx, value=cell.value)
                     if cell.has_style:
                         try:
                             dst_cell.font      = cell.font.copy()
