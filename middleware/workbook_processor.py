@@ -263,12 +263,40 @@ def _extract_unicode_strings(raw_bytes: bytes, min_len: int = 4) -> str:
     return "\n".join(ordered)[:20000]
 
 
+# Canonical display name per ISO-3 code (for countries detected directly from
+# workbook data, where we only have a code/alias and need something to show).
+ISO3_TO_NAME: Dict[str, str] = {
+    "DEU": "Germany", "GBR": "United Kingdom", "USA": "United States", "FRA": "France",
+    "NLD": "Netherlands", "AUS": "Australia", "SGP": "Singapore", "IND": "India",
+    "JPN": "Japan", "CAN": "Canada", "CHN": "China", "BRA": "Brazil", "MEX": "Mexico",
+    "ESP": "Spain", "ITA": "Italy", "SWE": "Sweden", "NOR": "Norway", "DNK": "Denmark",
+    "FIN": "Finland", "CHE": "Switzerland", "AUT": "Austria", "BEL": "Belgium",
+    "POL": "Poland", "ZAF": "South Africa", "NZL": "New Zealand", "MYS": "Malaysia",
+    "THA": "Thailand", "IDN": "Indonesia", "PHL": "Philippines", "HKG": "Hong Kong",
+    "TWN": "Taiwan", "KOR": "South Korea", "ARE": "United Arab Emirates", "SAU": "Saudi Arabia",
+    "ISR": "Israel", "TUR": "Turkey", "RUS": "Russia", "CZE": "Czech Republic",
+    "HUN": "Hungary", "ROU": "Romania", "PRT": "Portugal", "GRC": "Greece",
+    "IRL": "Ireland", "COL": "Colombia", "ARG": "Argentina", "CHL": "Chile",
+    "PER": "Peru", "EGY": "Egypt", "NGA": "Nigeria", "KEN": "Kenya",
+}
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _normalise_country(raw: str) -> Optional[str]:
     """Return ISO-3 code for a country string, or None if unrecognised."""
     key = raw.strip().lower()
     return COUNTRY_ALIASES.get(key)
+
+
+def _resolve_iso3(value: Any) -> Optional[str]:
+    """Resolve a raw cell value (name, alias, or ISO code) to ISO-3, or None."""
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    return _normalise_country(s)
 
 
 def _is_csf_tab_by_name(sheet_name: str) -> bool:
@@ -436,6 +464,75 @@ def load_workbook_from_path(ref_file_path: str) -> Optional[openpyxl.Workbook]:
     except Exception as e:
         print(f"[workbook_processor] load error {ref_file_path}: {e}")
         return None
+
+
+def detect_countries_in_workbooks(slot_files: List[Dict], refs_dir: Path) -> List[Dict[str, Any]]:
+    """
+    Scan all grounded reference workbooks and return the distinct countries
+    actually present in their CSF sheets — for the manual country-selection
+    flow, where no SOW is uploaded and countries must be read from the data
+    that is already grounded.
+
+    Detection order per CSF sheet:
+      1. If a country column was found, resolve every data-row value in it.
+      2. Otherwise, the country is usually encoded in the tab name itself
+         (e.g. "DEU_Payroll") — check for an embedded ISO-3 code there.
+      3. As a last resort, scan the first few cells of each data row.
+
+    Returns: [{"name": "Germany", "iso3": "DEU", "count": 42}, ...]
+             sorted alphabetically by name.
+    """
+    found: Dict[str, int] = {}
+
+    for slot_info in slot_files:
+        ref_id = slot_info.get("ref_id", "")
+        file_path = None
+        for candidate in refs_dir.glob(f"{ref_id}.*"):
+            file_path = candidate
+            break
+        if not file_path or not file_path.exists():
+            continue
+
+        wb = load_workbook_from_path(str(file_path))
+        if not wb:
+            continue
+
+        classification = classify_sheets(wb)
+        for sheet_name, info in classification.items():
+            if info["type"] != "csf":
+                continue
+            ws = wb[sheet_name]
+            country_col = info.get("country_col")
+            header_row  = info.get("header_row", 1)
+
+            if country_col:
+                for row in ws.iter_rows(min_row=header_row + 1, values_only=True):
+                    if len(row) < country_col:
+                        continue
+                    iso3 = _resolve_iso3(row[country_col - 1])
+                    if iso3:
+                        found[iso3] = found.get(iso3, 0) + 1
+            else:
+                tab_match = re.search(
+                    r'\b(DEU|GBR|USA|FRA|NLD|AUS|SGP|IND|JPN|CAN|CHN|BRA|MEX|ESP|ITA|SWE|NOR|DNK|FIN|CHE|AUT|BEL|POL|ZAF|NZL|MYS|THA|IDN|PHL|HKG|TWN|KOR|ARE|SAU|ISR|TUR|RUS|CZE|HUN|ROU|PRT|GRC|IRL|COL|ARG|CHL|PER|EGY|NGA|KEN)\b',
+                    sheet_name.upper(),
+                )
+                if tab_match:
+                    iso3 = tab_match.group(1)
+                    found[iso3] = found.get(iso3, 0) + 1
+                else:
+                    for row in ws.iter_rows(min_row=header_row + 1, max_col=5, values_only=True):
+                        for cv in row:
+                            iso3 = _resolve_iso3(cv)
+                            if iso3:
+                                found[iso3] = found.get(iso3, 0) + 1
+
+    result = [
+        {"name": ISO3_TO_NAME.get(iso3, iso3), "iso3": iso3, "count": count}
+        for iso3, count in found.items()
+    ]
+    result.sort(key=lambda c: c["name"])
+    return result
 
 
 def classify_sheets(wb: openpyxl.Workbook) -> Dict[str, Dict]:

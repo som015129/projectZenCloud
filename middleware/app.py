@@ -1215,6 +1215,27 @@ async def route_extract_countries(req: ExtractCountriesRequest):
     return {"success": True, "countries": countries, "count": len(countries)}
 
 
+@app.get("/workbook/detect-countries")
+async def route_detect_countries():
+    """
+    Scan all grounded reference workbooks and return the distinct countries
+    actually present in their CSF sheets — used by the manual country-
+    selection flow (no SOW required).
+    """
+    from workbook_processor import detect_countries_in_workbooks
+
+    slots = await list_workbook_slots()
+    if not slots:
+        raise HTTPException(404, "No reference workbooks have been uploaded. Ask Admin to upload grounding workbooks.")
+
+    slot_files = [
+        {"slot": s["slot"], "ref_id": s["ref_id"], "file_name": s["file_name"], "file_ext": s["file_ext"]}
+        for s in slots
+    ]
+    countries = detect_countries_in_workbooks(slot_files, REFS_DIR)
+    return {"success": True, "countries": countries, "count": len(countries)}
+
+
 @app.post("/workbook/generate")
 async def route_generate_workbook(req: GenerateWorkbookRequest):
     """

@@ -132,6 +132,21 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
   font-size:14px;flex:0 0 auto;transition:.13s}
 .file-card .fc-rm:hover{background:#FCEEF3;color:var(--hi);border-color:#F0CBD9}
 
+/* ── Mode toggle (manual vs SOW) ── */
+.mode-toggle{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.mode-card{padding:15px 16px;border:1.5px solid var(--line);border-radius:13px;
+  cursor:pointer;transition:all .14s;background:var(--surface)}
+.mode-card:hover{border-color:var(--lilac)}
+.mode-card.on{border-color:var(--purple);background:var(--lilac-bg)}
+.mode-card .mc-top{display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.mode-card .mc-icon{font-size:18px;flex:0 0 auto}
+.mode-card .mc-title{font-size:13.5px;font-weight:800;color:var(--ink)}
+.mode-card .mc-sub{font-size:11.5px;color:var(--muted);line-height:1.45}
+.mode-card .mc-radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);
+  flex:0 0 auto;margin-left:auto;display:grid;place-items:center;transition:all .14s}
+.mode-card.on .mc-radio{border-color:var(--purple)}
+.mode-card.on .mc-radio::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--purple)}
+
 /* ── Country chips ── */
 .country-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:9px;
   max-height:340px;overflow-y:auto;padding-right:2px;margin-bottom:14px}
@@ -270,7 +285,7 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
 
       <div class="sect">Workflow Steps</div>
       <div class="step-nav" id="snav1" onclick="goToStep(1)">
-        <span class="sn">1</span>Upload SOW / SP51
+        <span class="sn">1</span>Country Source
       </div>
       <div class="step-nav" id="snav2" onclick="goToStep(2)">
         <span class="sn">2</span>Confirm Countries
@@ -297,46 +312,78 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
         <p class="vsub">Upload a SOW or SP51, confirm in-scope countries, then generate a filtered EC Configuration Workbook — CSF sheets trimmed to your countries, global sheets kept intact.</p>
 
         <!-- ═══════════════════════════════════════
-             STEP 1 — Upload SOW / SP51
+             STEP 1 — Country Source
              ═══════════════════════════════════════ -->
         <div id="panel1">
           <div class="panel">
             <div class="ph">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h5"/></svg>
-              Step 1 &mdash; Upload SOW or SP51
+              Step 1 &mdash; Country Source
             </div>
             <div class="pb">
               <p style="font-size:13px;color:var(--muted);margin:0 0 16px">
-                Upload your Statement of Work (SOW) or SP51 scoping document. Claude will read it and identify all in-scope countries for the implementation.
+                Choose how in-scope countries should be determined.
               </p>
 
-              <div class="upload-zone" id="sowZone"
-                   ondragover="zwOver(event,'sowZone')" ondragleave="zwLeave('sowZone')" ondrop="zwDrop(event)">
-                <input type="file" id="sowFile" accept=".pdf,.docx,.doc,.xlsx,.xls,.txt,.pptx,.ppt,.mpp" onchange="sowChosen(event)"/>
-                <div class="upload-icon">&#128196;</div>
-                <div class="upload-title">Drop file here or click to browse</div>
-                <div class="upload-hint">PDF · DOCX · XLSX · PPTX · PPT · MPP · TXT &nbsp;·&nbsp; max 20 MB</div>
-              </div>
-
-              <div id="sowFileCard" style="display:none" class="file-card">
-                <span class="fc-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>
-                </span>
-                <div style="flex:1">
-                  <div class="fc-name" id="sowFileName"></div>
-                  <div class="fc-size" id="sowFileSize"></div>
+              <div class="mode-toggle">
+                <div class="mode-card on" id="modeManual" onclick="selectMode('manual')">
+                  <div class="mc-top"><span class="mc-icon">&#127760;</span><span class="mc-title">Select Countries Manually</span><span class="mc-radio"></span></div>
+                  <div class="mc-sub">Scan the grounded configuration workbook and pick from the countries already present in it.</div>
                 </div>
-                <button class="fc-rm" onclick="sowRemove()" title="Remove">&#215;</button>
+                <div class="mode-card" id="modeSow" onclick="selectMode('sow')">
+                  <div class="mc-top"><span class="mc-icon">&#128196;</span><span class="mc-title">Import SOW / SP51</span><span class="mc-radio"></span></div>
+                  <div class="mc-sub">Upload a scope document — Claude reads it and identifies in-scope countries.</div>
+                </div>
               </div>
 
-              <div id="sowMsg"></div>
+              <!-- ── Manual mode ── -->
+              <div id="manualModeBody">
+                <p style="font-size:13px;color:var(--muted);margin:0 0 16px">
+                  Reads the grounded reference workbook's CSF (country-specific) sheets and lists every country actually found in them.
+                </p>
+                <div class="btn-row" style="margin-top:0">
+                  <button class="btn" id="btnScan" onclick="scanWorkbook()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+                    <span id="btnScanLabel">Scan Grounded Workbook</span>
+                  </button>
+                </div>
+                <div id="scanMsg"></div>
+              </div>
 
-              <div class="btn-row">
-                <button class="btn" id="btnExtract" disabled onclick="extractCountries()">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-                  <span id="btnExtractLabel">Extract Countries</span>
-                </button>
-                <span id="extractHint" style="font-size:12px;color:var(--muted)">Select a document first</span>
+              <!-- ── SOW mode ── -->
+              <div id="sowModeBody" style="display:none">
+                <p style="font-size:13px;color:var(--muted);margin:0 0 16px">
+                  Upload your Statement of Work (SOW) or SP51 scoping document. Claude will read it and identify all in-scope countries for the implementation.
+                </p>
+
+                <div class="upload-zone" id="sowZone"
+                     ondragover="zwOver(event,'sowZone')" ondragleave="zwLeave('sowZone')" ondrop="zwDrop(event)">
+                  <input type="file" id="sowFile" accept=".pdf,.docx,.doc,.xlsx,.xls,.txt,.pptx,.ppt,.mpp" onchange="sowChosen(event)"/>
+                  <div class="upload-icon">&#128196;</div>
+                  <div class="upload-title">Drop file here or click to browse</div>
+                  <div class="upload-hint">PDF · DOCX · XLSX · PPTX · PPT · MPP · TXT &nbsp;·&nbsp; max 20 MB</div>
+                </div>
+
+                <div id="sowFileCard" style="display:none" class="file-card">
+                  <span class="fc-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>
+                  </span>
+                  <div style="flex:1">
+                    <div class="fc-name" id="sowFileName"></div>
+                    <div class="fc-size" id="sowFileSize"></div>
+                  </div>
+                  <button class="fc-rm" onclick="sowRemove()" title="Remove">&#215;</button>
+                </div>
+
+                <div id="sowMsg"></div>
+
+                <div class="btn-row">
+                  <button class="btn" id="btnExtract" disabled onclick="extractCountries()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+                    <span id="btnExtractLabel">Extract Countries</span>
+                  </button>
+                  <span id="extractHint" style="font-size:12px;color:var(--muted)">Select a document first</span>
+                </div>
               </div>
             </div>
           </div>
@@ -494,14 +541,46 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
 </svg>
 
 <script>
-const API = 'http://localhost:8000';
+const API = (['localhost','127.0.0.1'].includes(location.hostname)) ? 'http://localhost:8000' : 'https://projectzen-cloudui.fly.dev';
 
 /* ── State ─────────────────────────────────────── */
+let mode       = 'manual'; // 'manual' | 'sow'
 let sowFile    = null;   // { name, b64, size }
 let countries  = [];     // [{ name, iso3, selected }]
 let slots      = [];     // from /admin/workbook-slots
 let genBlob    = null;
 let curStep    = 1;
+
+/* ── Mode toggle ─────────────────────────────────── */
+function selectMode(m){
+  mode = m;
+  document.getElementById('modeManual').classList.toggle('on', m==='manual');
+  document.getElementById('modeSow').classList.toggle('on', m==='sow');
+  document.getElementById('manualModeBody').style.display = m==='manual' ? '' : 'none';
+  document.getElementById('sowModeBody').style.display = m==='sow' ? '' : 'none';
+}
+
+/* ── Scan grounded workbook for countries (manual mode) ── */
+async function scanWorkbook(){
+  setBtnLoading('btnScan','btnScanLabel',true,'Scanning…');
+  clearMsg('scanMsg');
+  try {
+    const res = await fetch(API+'/workbook/detect-countries');
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail || 'Server error '+res.status);
+    countries = (data.countries||[]).map(c=>({name:c.name, iso3:c.iso3, selected:true}));
+    if(countries.length === 0)
+      showMsg('scanMsg','warn','No countries detected in the grounded workbook — you can add them manually in Step 2.');
+    else
+      toast(countries.length+' countries detected in the grounded workbook');
+    buildGrid();
+    setStep(2);
+  } catch(err){
+    showMsg('scanMsg','err','Scan failed: '+err.message);
+  } finally {
+    setBtnLoading('btnScan','btnScanLabel',false,'Scan Grounded Workbook');
+  }
+}
 
 /* ── Step navigation ────────────────────────────── */
 function setStep(n){
@@ -577,7 +656,7 @@ async function extractCountries(){
   try {
     const res = await fetch(API+'/workbook/extract-countries',{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ file_data_b64: sowFile.b64, file_name: sowFile.name })
+      body: JSON.stringify({ fileData: sowFile.b64, fileName: sowFile.name })
     });
     const data = await res.json();
     if(!res.ok) throw new Error(data.detail || 'Server error '+res.status);
@@ -716,7 +795,7 @@ async function startGenerate(){
   try {
     const res = await fetch(API+'/workbook/generate',{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ in_scope_countries: sel.map(c=>({name:c.name,iso3:c.iso3})) })
+      body: JSON.stringify({ countries: sel.map(c=>({name:c.name,iso3:c.iso3})) })
     });
     if(!res.ok){
       let msg='Server error '+res.status;
