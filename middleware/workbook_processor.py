@@ -332,10 +332,30 @@ ISO3_TO_NAME: Dict[str, str] = {alpha3: name for _, alpha3, name in _ISO_COUNTRI
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+_NAME_CODE_RE = re.compile(r'^(.*?)\s*\(([A-Za-z]{2,3})\)\s*$')
+
+
 def _normalise_country(raw: str) -> Optional[str]:
-    """Return ISO-3 code for a country string, or None if unrecognised."""
+    """
+    Return ISO-3 code for a country string, or None if unrecognised.
+
+    Real SF EC workbooks' CSF country columns commonly format values as
+    "Angola (AGO)", "Argentina (ARG)" — name plus code in parentheses,
+    not a bare name or code (verified directly against the production
+    "National ID" sheet). Without this, exact-match lookup fails for
+    every such value, silently excluding all CSF data regardless of
+    which countries are actually in scope.
+    """
     key = raw.strip().lower()
-    return COUNTRY_ALIASES.get(key)
+    direct = COUNTRY_ALIASES.get(key)
+    if direct:
+        return direct
+
+    m = _NAME_CODE_RE.match(raw.strip())
+    if m:
+        name_part, code_part = m.group(1).strip().lower(), m.group(2).strip().lower()
+        return COUNTRY_ALIASES.get(code_part) or COUNTRY_ALIASES.get(name_part)
+    return None
 
 
 def _resolve_iso3(value: Any) -> Optional[str]:
