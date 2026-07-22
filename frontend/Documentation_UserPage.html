@@ -2654,6 +2654,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   renderCascDocGrid();
   // initialise outer panel id references
   document.getElementById('outerPanelUser').classList.add('on');
+  if(location.hash==='#grounding'){ switchOuter('admin'); switchAdminTab('ground'); }
 });
 </script>
 </body>

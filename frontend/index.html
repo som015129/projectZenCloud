@@ -1417,7 +1417,8 @@ function render(){
   else if(state.view==='workspace'){m.innerHTML=viewWorkspace(AById[state.agent]);setCrumb(WSNAME[AById[state.agent].ws]+' <span style="opacity:.5">▸</span> <b>'+AById[state.agent].name+'</b>');}
   else if(state.view==='approvals'){m.innerHTML=viewApprovals();setCrumb('Approvals');}
   else if(state.view==='dashboard'){m.innerHTML=viewDashboard();setCrumb('Overview');}
-  else {m.innerHTML=viewEmpty(state.view);setCrumb(state.view==='usage'?'Usage & cost':'Admin');}
+  else if(state.view==='admin'){m.innerHTML=viewAdmin();setCrumb('Admin');}
+  else {m.innerHTML=viewEmpty(state.view);setCrumb('Usage & cost');}
 }
 
 function roleBand(){
@@ -1521,8 +1522,14 @@ function viewDashboard(){
 }
 
 function viewEmpty(v){
-  const t=v==='usage'?['Usage & cost','Per-project token spend and run history live here — fed by the platform telemetry.']:['Admin','Users, roles, SF credentials, config and entitlements are managed here.'];
-  return '<div class="view"><div class="empty-view"><div class="ei">'+svg(v==='usage'?'usage':'admin')+'</div><h3>'+t[0]+'</h3><p>'+t[1]+'</p><p style="font-size:12px">Not wired in this prototype.</p></div></div>';
+  const t=['Usage & cost','Per-project token spend and run history live here — fed by the platform telemetry.'];
+  return '<div class="view"><div class="empty-view"><div class="ei">'+svg('usage')+'</div><h3>'+t[0]+'</h3><p>'+t[1]+'</p><p style="font-size:12px">Not wired in this prototype.</p></div></div>';
+}
+function viewAdmin(){
+  const tools=[{id:'doc_grounding',name:'Document Grounding',ws:'documentation',writes:false,blurb:'Manage the reference files that ground every generated document in the knowledge graph.'}];
+  return '<div class="view"><h1 class="vt">Admin</h1><p class="vsub">Users, roles, SF credentials, config and entitlements are managed here.</p>'
+   +'<div class="grouphdr">Admin tools<span class="gc">'+tools.length+'</span></div><div class="cards">'+tools.map(agentCard).join('')+'</div>'
+   +'</div>';
 }
 
 /* ---------------- run simulation ---------------- */
@@ -1593,6 +1600,7 @@ function openAgent(id){
   if(id==='governance_doc'){window.parent.navigateToPage('documentation_governance.html');return;}
   if(id==='config_workbook'){window.parent.navigateToPage('documentation_workbook.html');return;}
   if(id==='sf_functional_doc'){window.parent.navigateToPage('documentation_governance.html');return;}
+  if(id==='doc_grounding'){window.parent.navigateToPage('Documentation_UserPage.html#grounding');return;}
   state.agent=id;state.view='workspace';render();document.querySelector('main').scrollTop=0;
 }
 function toast(msg){const t=document.createElement('div');t.className='toast';t.innerHTML=svg('check')+msg;document.getElementById('toasts').appendChild(t);setTimeout(()=>{t.style.opacity=0;t.style.transform='translateY(8px)';t.style.transition='.3s';setTimeout(()=>t.remove(),300);},2500);}
