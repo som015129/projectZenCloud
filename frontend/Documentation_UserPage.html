@@ -614,7 +614,7 @@ table { overflow-x: auto; }
 
   <!-- OUTER TABS: User / Admin -->
   <div class="outer-tabs">
-    <button class="outer-tab on" id="outerTabUser"  onclick="switchOuter('user')">✦ User — Document Generation</button>
+    <button class="outer-tab on" id="outerTabUser"  onclick="switchOuter('user')" style="display:none">✦ User — Document Generation</button>
     <button class="outer-tab"   id="outerTabAdmin" onclick="switchOuter('admin')">⚙ Admin — Document Grounding</button>
   </div>
 
@@ -1378,6 +1378,11 @@ window._pulledAdminRefData    = null;
 // ════════════════════════════════════════════════
 const srv  = () => document.getElementById('serverUrl').value.replace(/\/$/, '');
 const uname= () => document.getElementById('usernameInput').value.trim() || 'user';
+
+(function(){
+  const isLocal=['localhost','127.0.0.1'].includes(location.hostname);
+  if(!isLocal) document.getElementById('serverUrl').value='https://projectzen-cloudui.fly.dev';
+})();
 const delay= ms => new Promise(r => setTimeout(r, ms));
 const getConfigs = () => { try { const r=localStorage.getItem(CONFIG_KEY); if(r) return JSON.parse(r); } catch(_){} return {}; };
 
