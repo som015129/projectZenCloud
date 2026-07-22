@@ -751,12 +751,12 @@ async function toSlots(){
 
 function renderSlots(){
   const grid = document.getElementById('slotsGrid');
-  const loaded = slots.filter(s=>s.loaded);
+  const loaded = slots.filter(s=>s.occupied);
   grid.innerHTML = '';
   slots.forEach(s=>{
     const d = document.createElement('div');
-    d.className = 'slot-card'+(s.loaded?' loaded':'');
-    d.innerHTML = s.loaded
+    d.className = 'slot-card'+(s.occupied?' loaded':'');
+    d.innerHTML = s.occupied
       ? `<div class="slot-num">Slot ${s.slot}</div>
          <div class="slot-name">${esc(s.file_name)}</div>
          <div class="slot-meta">${(s.size_kb||0).toFixed(1)} KB</div>
@@ -783,7 +783,7 @@ function renderSlots(){
 
 function toGenerate(){
   const sel = countries.filter(c=>c.selected);
-  const loaded = slots.filter(s=>s.loaded);
+  const loaded = slots.filter(s=>s.occupied);
   document.getElementById('sumCountries').textContent = sel.map(c=>c.name).join(', ') || '—';
   document.getElementById('sumSlots').textContent = loaded.length+' / 4 loaded';
   setStep(4);
@@ -820,7 +820,7 @@ async function startGenerate(){
     addRunStep('Workbook assembled · '+fmtBytes(blob.size),'');
     genBlob = blob;
 
-    const loaded = slots.filter(s=>s.loaded);
+    const loaded = slots.filter(s=>s.occupied);
     const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,16);
     const fname = 'EC_ConfigWorkbook_'+ts+'.xlsx';
     document.getElementById('dlFilename').textContent = fname;
