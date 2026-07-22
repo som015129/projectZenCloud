@@ -406,7 +406,10 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
 
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
                 <span style="font-size:12px;font-weight:800;color:var(--ink)">Detected Countries</span>
-                <span class="country-stats" id="cStats">0 selected</span>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <button type="button" class="btn ghost sm" id="btnSelectAll" onclick="toggleSelectAll()">Select All</button>
+                  <span class="country-stats" id="cStats">0 selected</span>
+                </div>
               </div>
 
               <div class="country-grid" id="countryGrid"></div>
@@ -568,7 +571,7 @@ async function scanWorkbook(){
     const res = await fetch(API+'/workbook/detect-countries');
     const data = await res.json();
     if(!res.ok) throw new Error(data.detail || 'Server error '+res.status);
-    countries = (data.countries||[]).map(c=>({name:c.name, iso3:c.iso3, selected:true}));
+    countries = (data.countries||[]).map(c=>({name:c.name, iso3:c.iso3, selected:false}));
     if(countries.length === 0)
       showMsg('scanMsg','warn','No countries detected in the grounded workbook — you can add them manually in Step 2.');
     else
@@ -704,6 +707,14 @@ function updStats(){
   const n = countries.filter(c=>c.selected).length;
   document.getElementById('cStats').textContent = n+' selected';
   document.getElementById('btnToSlots').disabled = n === 0;
+  const allSelected = countries.length > 0 && n === countries.length;
+  document.getElementById('btnSelectAll').textContent = allSelected ? 'Clear All' : 'Select All';
+}
+
+function toggleSelectAll(){
+  const allSelected = countries.length > 0 && countries.every(c=>c.selected);
+  countries.forEach(c=>c.selected = !allSelected);
+  buildGrid();
 }
 
 function addManual(){
