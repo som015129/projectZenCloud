@@ -1917,22 +1917,27 @@ const PHASE_COLORS_GRND = {
 };
 
 // ════════════════════════════════════════════════
-// CYTOSCAPE CDN LOADER
+// CYTOSCAPE LOADER (self-hosted — avoids CDN blocking on corporate networks)
 // ════════════════════════════════════════════════
-(function loadCytoscapeCDN(){
-  function addScript(src,cb){ const el=document.createElement('script'); el.src=src; el.onload=cb||null; document.head.appendChild(el); }
-  addScript('https://unpkg.com/cytoscape@3.29.2/dist/cytoscape.min.js', ()=>{
-    addScript('https://unpkg.com/dagre@0.8.5/dist/dagre.min.js', ()=>{
-      addScript('https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js', ()=>{
+(function loadCytoscapeVendor(){
+  function addScript(src,cb,onerr){ const el=document.createElement('script'); el.src=src; el.onload=cb||null; el.onerror=onerr||null; document.head.appendChild(el); }
+  function fail(){
+    console.error('ProjectZen: failed to load graph library from vendor/');
+    const el=document.getElementById('grndStatusSummary');
+    if(el) el.textContent='⚠ Graph library failed to load — see console';
+  }
+  addScript('vendor/cytoscape.min.js', ()=>{
+    addScript('vendor/dagre.min.js', ()=>{
+      addScript('vendor/cytoscape-dagre.js', ()=>{
         if(typeof cytoscape!=='undefined' && typeof cytoscapeDagre!=='undefined'){
           cytoscape.use(cytoscapeDagre);
           window._cyReady=true;
           if(window._pendingCascInit) window._pendingCascInit();
           if(window._pendingGrndInit) window._pendingGrndInit();
-        }
-      });
-    });
-  });
+        } else { fail(); }
+      }, fail);
+    }, fail);
+  }, fail);
 })();
 
 // ════════════════════════════════════════════════
