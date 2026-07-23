@@ -746,6 +746,31 @@ def classify_sheets(wb: openpyxl.Workbook) -> Dict[str, Dict]:
     return result
 
 
+# Shared blank-style instances for _filter_picklists_sheet_in_place's
+# compaction pass — reused rather than constructed per cell since
+# they're only ever assigned (never mutated), and openpyxl dedupes
+# identical styles into its shared style table on save regardless.
+_DEFAULT_FONT      = Font()
+_DEFAULT_FILL      = PatternFill()
+_DEFAULT_BORDER    = Border()
+_DEFAULT_ALIGNMENT = Alignment()
+
+
+def _detached_style(value):
+    """
+    Return a detached, independently-assignable copy of a Font/Fill/
+    Border/Alignment style value read from an eager-mode cell.
+
+    cell.font (etc.) on an eager-mode cell returns a live StyleProxy
+    tied to that cell's current position in the shared style table —
+    .copy() detaches it into a plain, independently assignable object,
+    which matters here because _filter_picklists_sheet_in_place reads
+    many cells' styles up front before writing any of them elsewhere.
+    """
+    copy_fn = getattr(value, "copy", None)
+    return copy_fn() if copy_fn else value
+
+
 def _delete_row_ranges(ws, rows_to_delete: List[int]) -> None:
     """
     Merge consecutive row numbers into contiguous (start, count) ranges
@@ -863,12 +888,29 @@ def _filter_picklists_sheet_in_place(ws, iso3_set: set) -> Tuple[int, int]:
       deleting them would remove valid global reference data, a worse
       failure than leaving a few extra picklist rows in place.
 
+    Unlike CSF sheets, this does NOT use ws.delete_rows() per kept/
+    deleted boundary. A real ~40,000-row production Picklists sheet
+    scoped to a single country produced over 2,400 separate keep/
+    delete boundaries (each of ~194 base picklists' country variants
+    is its own small cluster, and only one is kept) — even after
+    range-merging, that's 2,400+ delete_rows() calls, each shifting
+    the ~40,000-row remainder (measured: ~180ms/call at this scale,
+    ~7+ minutes total). Instead, kept rows are captured (value +
+    detached style, across every column up to the sheet's real width
+    so no stale data/formatting survives from whatever previously
+    occupied a now-reused row) during the scan, rewritten into
+    compacted positions in a single pass, and the now-unused trailing
+    range is removed with exactly one delete_rows() call.
+
     Returns (kept_count, removed_count).
     """
-    rows_to_delete: List[int] = []
-    kept = 0
+    max_col = ws.max_column or 1
+    kept_rows: List[Dict[int, tuple]] = []
+    removed = 0
+    last_row_idx = 0
 
     for row_idx, col_cells in _stream_real_rows(ws):
+        last_row_idx = row_idx
         col_map = {c: cell for c, cell in col_cells}
         picklist_id_cell = col_map.get(3)
         picklist_id = picklist_id_cell.value if picklist_id_cell else None
@@ -888,16 +930,44 @@ def _filter_picklists_sheet_in_place(ws, iso3_set: set) -> Tuple[int, int]:
                 if m:
                     resolved = _resolve_iso3(m.group(2))
 
-        if resolved is None:
-            # No reliable country signal — leave it exactly as-is.
-            kept += 1
-        elif resolved in iso3_set:
-            kept += 1
-        else:
-            rows_to_delete.append(row_idx)
+        if resolved is not None and resolved not in iso3_set:
+            removed += 1
+            continue
 
-    _delete_row_ranges(ws, rows_to_delete)
-    return kept, len(rows_to_delete)
+        kept_rows.append({
+            col_idx: (
+                cell.value,
+                _detached_style(cell.font), _detached_style(cell.fill),
+                _detached_style(cell.border), _detached_style(cell.alignment),
+                cell.number_format,
+            )
+            for col_idx, cell in col_cells
+        })
+
+    for new_row_idx, captured in enumerate(kept_rows, start=1):
+        for col_idx in range(1, max_col + 1):
+            dst = ws.cell(row=new_row_idx, column=col_idx)
+            if col_idx in captured:
+                value, font, fill, border, alignment, number_format = captured[col_idx]
+                dst.value = value
+                dst.font = font
+                dst.fill = fill
+                dst.border = border
+                dst.alignment = alignment
+                dst.number_format = number_format
+            else:
+                dst.value = None
+                dst.font = _DEFAULT_FONT
+                dst.fill = _DEFAULT_FILL
+                dst.border = _DEFAULT_BORDER
+                dst.alignment = _DEFAULT_ALIGNMENT
+                dst.number_format = "General"
+
+    tail_start = len(kept_rows) + 1
+    if tail_start <= last_row_idx:
+        ws.delete_rows(tail_start, last_row_idx - tail_start + 1)
+
+    return len(kept_rows), removed
 
 
 def _add_summary_sheet(out_wb: openpyxl.Workbook, in_scope_countries: List[Dict[str, str]], source_count: int) -> None:
