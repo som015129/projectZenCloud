@@ -1224,9 +1224,14 @@ async def run_workbook_generation(
             )
 
             if xlsx_bytes:
-                country_codes = "_".join(c.get("iso3", "") for c in in_scope_countries[:5])
                 base_name = _clean_output_basename(Path(slot_info.get("file_name", f"Workbook_{slot_num}")).stem)
-                out_name = f"{base_name}_{country_codes}.xlsx"
+                # Country suffix only for a small, readable selection (<=3);
+                # beyond that it stops being a useful filename signal.
+                if len(in_scope_countries) <= 3:
+                    country_codes = "_".join(c.get("iso3", "") for c in in_scope_countries)
+                    out_name = f"{base_name}_{country_codes}.xlsx"
+                else:
+                    out_name = f"{base_name}.xlsx"
                 results.append({
                     "slot": slot_num,
                     "file_name": out_name,
