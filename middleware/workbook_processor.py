@@ -747,8 +747,16 @@ def _filter_sheet_rows_in_place(ws, info: Dict, iso3_set: set) -> Tuple[int, int
     off whether the cell resolves to a country at all sidesteps needing
     to know where any such boundary actually falls.
 
-    Rows are collected first, then deleted from the bottom up so
-    earlier row indices stay valid as deletion shifts things.
+    Rows to delete are merged into contiguous (start, count) ranges and
+    removed with one delete_rows() call per range, from the bottom up.
+    openpyxl's delete_rows shifts every remaining cell below the
+    deletion point on EVERY call — calling it once per individual row
+    is O(n^2) for a sheet with many rows to remove, which is exactly
+    what made a real ~1,500-row CSF sheet with ~1,460 out-of-scope rows
+    hang for 10+ minutes in production. Merging consecutive row numbers
+    into ranges cuts the call count down to the number of contiguous
+    deleted blocks — typically a small handful, since a real country's
+    rows are themselves usually contiguous.
 
     Returns (kept_count, removed_count).
     """
@@ -783,8 +791,16 @@ def _filter_sheet_rows_in_place(ws, info: Dict, iso3_set: set) -> Tuple[int, int
         else:
             rows_to_delete.append(row_idx)
 
-    for row_idx in reversed(rows_to_delete):
-        ws.delete_rows(row_idx, 1)
+    ranges: List[Tuple[int, int]] = []
+    for row_idx in rows_to_delete:
+        if ranges and row_idx == ranges[-1][0] + ranges[-1][1]:
+            start, count = ranges[-1]
+            ranges[-1] = (start, count + 1)
+        else:
+            ranges.append((row_idx, 1))
+
+    for start, count in reversed(ranges):
+        ws.delete_rows(start, count)
 
     return kept, len(rows_to_delete)
 
