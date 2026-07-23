@@ -1236,15 +1236,21 @@ async def route_detect_countries():
     return {"success": True, "countries": countries, "count": len(countries)}
 
 
-@app.post("/workbook/generate")
-async def route_generate_workbook(req: GenerateWorkbookRequest):
+@app.post("/workbook/generate/start")
+async def route_generate_workbook_start(req: GenerateWorkbookRequest):
     """
-    Generate a filtered Configuration Workbook xlsx.
-    Reads all occupied workbook slots, filters CSF sheets to in-scope countries,
-    returns the xlsx file as a download.
+    Start a background Configuration Workbook generation job — one output
+    file per occupied grounding slot (1-4), never merged. Returns a job_id
+    immediately; client connects to /workbook/generate/stream/{job_id} for
+    live progress (SSE), then downloads results once complete.
+
+    Generation is CPU-bound and can take several minutes per slot (each
+    grounded workbook is loaded in fully writable mode to preserve exact
+    fidelity — see workbook_processor.load_workbook_for_editing), which is
+    why this doesn't block on a single request/response the way /generate
+    routes elsewhere in this file do.
     """
-    from workbook_processor import generate_filtered_workbook
-    from fastapi.responses import Response
+    from workbook_processor import create_workbook_job, run_workbook_generation
 
     if not req.countries:
         raise HTTPException(400, "No countries provided")
@@ -1253,30 +1259,110 @@ async def route_generate_workbook(req: GenerateWorkbookRequest):
     if not slots:
         raise HTTPException(404, "No reference workbooks have been uploaded. Ask Admin to upload grounding workbooks.")
 
-    slot_files = []
-    for s in slots:
-        slot_files.append({
-            "slot":      s["slot"],
-            "ref_id":    s["ref_id"],
-            "file_name": s["file_name"],
-            "file_ext":  s["file_ext"],
-        })
+    slot_files = [
+        {"slot": s["slot"], "ref_id": s["ref_id"], "file_name": s["file_name"], "file_ext": s["file_ext"]}
+        for s in slots
+    ]
 
-    try:
-        xlsx_bytes = await generate_filtered_workbook(slot_files, req.countries, REFS_DIR)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(500, f"Workbook generation failed: {e}")
-    if not xlsx_bytes:
-        raise HTTPException(500, "Workbook generation failed — check server logs")
+    job_id = str(uuid.uuid4())
+    create_workbook_job(job_id)
+    asyncio.create_task(run_workbook_generation(job_id, req.countries, slot_files, REFS_DIR))
 
-    country_codes = "_".join(c.get("iso3", "") for c in req.countries[:5])
-    file_name = f"Config_Workbook_{country_codes}.xlsx"
+    return {
+        "success":   True,
+        "jobId":     job_id,
+        "totalSlots": len(slot_files),
+        "streamUrl": f"/workbook/generate/stream/{job_id}",
+    }
 
-    print(f"   📊 Generated workbook: {file_name} ({len(xlsx_bytes)//1024} KB) for {len(req.countries)} countries")
+
+@app.get("/workbook/generate/stream/{job_id}")
+async def route_generate_workbook_stream(job_id: str):
+    """
+    Server-Sent Events stream for a workbook generation job.
+    Drains the asyncio.Queue set up by /workbook/generate/start.
+    Each event: data: {json}\n\n — mirrors the /cascade/stream pattern.
+    """
+    from workbook_processor import get_workbook_queue, cleanup_workbook_queue
+
+    async def event_generator():
+        q = get_workbook_queue(job_id)
+        if not q:
+            yield f"data: {json.dumps({'event': 'error', 'data': {'message': 'Job not found'}})}\n\n"
+            return
+
+        try:
+            while True:
+                try:
+                    item = await asyncio.wait_for(q.get(), timeout=60.0)
+                except asyncio.TimeoutError:
+                    yield f": ping\n\n"
+                    continue
+
+                if item is None:
+                    yield f"data: {json.dumps({'event': 'stream_end', 'data': {}})}\n\n"
+                    break
+
+                event_type = item.get("event", "message")
+                data       = item.get("data", {})
+                yield f"data: {json.dumps({'event': event_type, 'data': data})}\n\n"
+
+        except asyncio.CancelledError:
+            pass
+        finally:
+            cleanup_workbook_queue(job_id)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control":               "no-cache",
+            "X-Accel-Buffering":           "no",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
+@app.get("/workbook/generate/download/{job_id}/zip")
+async def route_download_workbook_zip(job_id: str):
+    """Download all generated files for a job as one ZIP archive."""
+    import io
+    import zipfile
+    from fastapi.responses import Response
+    from workbook_processor import get_workbook_result
+
+    result = get_workbook_result(job_id)
+    if not result or not result.get("slots"):
+        raise HTTPException(404, "Job not found, still running, or results have expired")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for slot in result["slots"]:
+            zf.writestr(slot["file_name"], slot["bytes"])
+
     return Response(
-        content=xlsx_bytes,
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="Config_Workbooks.zip"'},
+    )
+
+
+@app.get("/workbook/generate/download/{job_id}/{slot}")
+async def route_download_workbook_slot(job_id: str, slot: int):
+    """Download a single generated file for one grounding slot."""
+    from fastapi.responses import Response
+    from workbook_processor import get_workbook_result
+
+    result = get_workbook_result(job_id)
+    if not result or not result.get("slots"):
+        raise HTTPException(404, "Job not found, still running, or results have expired")
+
+    match = next((s for s in result["slots"] if s["slot"] == slot), None)
+    if not match:
+        raise HTTPException(404, f"Slot {slot} not found in this job's results")
+
+    return Response(
+        content=match["bytes"],
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{file_name}"'},
+        headers={"Content-Disposition": f'attachment; filename="{match["file_name"]}"'},
     )

@@ -203,6 +203,37 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
 .artifact .an{font-size:13.5px;font-weight:800;color:var(--ink)}
 .artifact .am{font-size:11.5px;color:var(--muted)}
 .artifact .tags{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.artifact.zip-artifact .ai{background:linear-gradient(135deg,var(--purple),var(--violet))}
+.artifact .dlbtn{flex:0 0 auto}
+
+/* ── Job progress ── */
+.progress-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px}
+.progress-title{font-size:13.5px;font-weight:800;color:var(--ink)}
+.progress-sub{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap}
+.progress-track{height:9px;border-radius:20px;background:var(--lilac-bg);overflow:hidden;
+  margin-bottom:16px;position:relative}
+.progress-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--purple),var(--dk));
+  width:0%;transition:width .5s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.progress-fill::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);
+  width:70px;animation:shimmer 1.5s linear infinite}
+@keyframes shimmer{from{transform:translateX(-90px)}to{transform:translateX(320px)}}
+.progress-fill.indeterminate{width:32%!important;animation:indet 1.35s ease-in-out infinite}
+@keyframes indet{0%{margin-left:-32%}50%{margin-left:68%}100%{margin-left:118%}}
+
+/* ── Live log slot grouping ── */
+.run-step.slot-header{padding-top:14px;margin-top:2px;border-top:1px solid var(--line-2);border-bottom:none}
+.run-step.slot-header .sx{font-weight:800;color:var(--violet);font-size:12.5px;
+  text-transform:uppercase;letter-spacing:.05em}
+.run-step.slot-header .sd{background:var(--purple)}
+.run-step.err .sd{background:var(--hi)}
+.run-step.err .sx{color:var(--hi)}
+
+/* ── Results ── */
+.results-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+.results-head svg{width:20px;height:20px;color:var(--green)}
+.results-head .rt{font-size:15px;font-weight:800;color:var(--ink)}
+.file-cards{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 
 /* ── Gate / notice ── */
 .notice{border-radius:13px;padding:13px 16px;display:flex;align-items:flex-start;gap:11px;flex-wrap:wrap}
@@ -479,8 +510,8 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
               <div class="sum-table" id="genSummary">
                 <div class="sum-row"><span class="lbl">In-scope countries</span><span class="val" id="sumCountries">—</span></div>
                 <div class="sum-row"><span class="lbl">Reference workbook slots</span><span class="val" id="sumSlots">—</span></div>
-                <div class="sum-row"><span class="lbl">Output format</span><span class="val">XLSX — Microsoft Excel</span></div>
-                <div class="sum-row"><span class="lbl">Sheet strategy</span><span class="val">CSF → filtered by country &nbsp;·&nbsp; Global → copied as-is</span></div>
+                <div class="sum-row"><span class="lbl">Output format</span><span class="val">XLSX — Microsoft Excel, one file per grounded workbook</span></div>
+                <div class="sum-row"><span class="lbl">Sheet strategy</span><span class="val">CSF rows for other countries deleted in place &nbsp;·&nbsp; everything else preserved exactly</span></div>
               </div>
 
               <!-- Actions -->
@@ -492,33 +523,42 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
                 </button>
               </div>
 
-              <!-- Live run log -->
+              <!-- Live progress -->
               <div id="runPanel" style="display:none;margin-top:18px">
-                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">Live run</div>
+                <div class="progress-head">
+                  <span class="progress-title" id="progressTitle">Starting…</span>
+                  <span class="progress-sub" id="progressSub"></span>
+                </div>
+                <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
                 <div class="run-log" id="runLog"></div>
               </div>
 
-              <!-- Download artifact -->
-              <div id="dlPanel" style="display:none;margin-top:18px">
-                <div class="artifact">
+              <!-- Results -->
+              <div id="resultsPanel" style="display:none;margin-top:18px">
+                <div class="results-head">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg>
+                  <span class="rt" id="resultsTitle">Workbook ready</span>
+                </div>
+
+                <!-- ZIP — shown only when more than one file was generated -->
+                <div id="zipCard" style="display:none" class="artifact zip-artifact">
                   <span class="ai">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h5"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2z"/></svg>
                   </span>
                   <div style="flex:1">
-                    <div class="an" id="dlFilename">EC_ConfigWorkbook.xlsx</div>
-                    <div class="am" id="dlMeta">Generated · ready to download</div>
-                    <div class="tags">
-                      <span class="tagr" id="dlCountTag"></span>
-                      <span class="tagv" id="dlSlotTag"></span>
-                      <span class="tagw">CSF filtered</span>
-                    </div>
+                    <div class="an">All workbooks (ZIP)</div>
+                    <div class="am" id="zipMeta">Bundles every generated file</div>
                   </div>
-                </div>
-                <div class="btn-row">
-                  <button class="btn ok" onclick="doDownload()">
+                  <a class="btn ok dlbtn" id="zipDlBtn" href="#" download>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 20h14"/></svg>
-                    Download XLSX
-                  </button>
+                    Download ZIP
+                  </a>
+                </div>
+
+                <!-- Individual files — one card per grounded slot -->
+                <div class="file-cards" id="fileCards"></div>
+
+                <div class="btn-row">
                   <button class="btn ghost" onclick="startOver()">&#8635; Generate Another</button>
                 </div>
               </div>
@@ -551,8 +591,16 @@ let mode       = 'manual'; // 'manual' | 'sow'
 let sowFile    = null;   // { name, b64, size }
 let countries  = [];     // [{ name, iso3, selected }]
 let slots      = [];     // from /admin/workbook-slots
-let genBlob    = null;
 let curStep    = 1;
+
+/* ── Generation job state ─────────────────────────── */
+let wbEventSource        = null;
+let wbJobId               = null;
+let wbTotalSlots          = 0;
+let wbCompletedSlots      = 0;
+let wbCurrentSlotSheetsDone  = 0;
+let wbCurrentSlotSheetsTotal = 0;
+let wbIndeterminate       = false;
 
 /* ── Mode toggle ─────────────────────────────────── */
 function selectMode(m){
@@ -789,79 +837,221 @@ function toGenerate(){
   setStep(4);
 }
 
-/* ── Generate ───────────────────────────────────── */
+/* ── Generate (background job + live SSE progress) ─ */
 async function startGenerate(){
   const sel = countries.filter(c=>c.selected);
   if(!sel.length) return;
 
   document.getElementById('genActions').style.display='none';
+  document.getElementById('resultsPanel').style.display='none';
   document.getElementById('runPanel').style.display='';
-  document.getElementById('dlPanel').style.display='none';
+  document.getElementById('runLog').innerHTML='';
   document.getElementById('genErr').innerHTML='';
-  genBlob = null;
 
-  addRunStep('Preparing country filter — '+sel.map(c=>c.name).join(', '),'');
-  addRunStep('Calling SAP SF workbook processor…','llm');
+  wbJobId=null; wbTotalSlots=0; wbCompletedSlots=0;
+  wbCurrentSlotSheetsDone=0; wbCurrentSlotSheetsTotal=0; wbIndeterminate=false;
+  setProgress(0,'Starting…','');
 
   try {
-    const res = await fetch(API+'/workbook/generate',{
+    const res = await fetch(API+'/workbook/generate/start',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ countries: sel.map(c=>({name:c.name,iso3:c.iso3})) })
     });
-    if(!res.ok){
-      let msg='Server error '+res.status;
-      try{ const j=await res.json(); msg=j.detail||msg; }catch{}
-      throw new Error(msg);
-    }
-    addRunStep('Merging reference workbooks…','llm');
-    const blob = await res.blob();
-    if(blob.size<100) throw new Error('Generated file is empty or invalid.');
-    addRunStep('Filtering CSF sheets · copying global sheets…','write');
-    addRunStep('Workbook assembled · '+fmtBytes(blob.size),'');
-    genBlob = blob;
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail || 'Server error '+res.status);
 
-    const loaded = slots.filter(s=>s.occupied);
-    const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,16);
-    const fname = 'EC_ConfigWorkbook_'+ts+'.xlsx';
-    document.getElementById('dlFilename').textContent = fname;
-    document.getElementById('dlMeta').textContent = 'Generated · '+fmtBytes(blob.size);
-    document.getElementById('dlCountTag').textContent = sel.length+' countr'+(sel.length===1?'y':'ies');
-    document.getElementById('dlSlotTag').textContent = loaded.length+' slot'+(loaded.length===1?'':'s')+' merged';
-    document.getElementById('dlPanel').style.display='';
-    toast('Workbook ready — click Download');
+    wbJobId = data.jobId;
+    wbTotalSlots = data.totalSlots || 1;
+    setProgress(0, `Generating ${wbTotalSlots} workbook${wbTotalSlots===1?'':'s'}…`, `0 / ${wbTotalSlots}`);
+    wbConnectSSE(data.streamUrl);
   } catch(err){
-    addRunStep('Error: '+err.message,'');
-    document.getElementById('genErr').innerHTML =
-      mkNotice('err','Generation failed',esc(err.message));
-    document.getElementById('genActions').style.display='';
+    wbFail(err.message);
   }
 }
 
-function addRunStep(text, tool){
+function wbConnectSSE(streamUrl){
+  if(wbEventSource){ wbEventSource.close(); }
+  wbEventSource = new EventSource(API+streamUrl);
+  wbEventSource.onmessage = e => { try { wbHandleEvent(JSON.parse(e.data)); } catch(_){} };
+  wbEventSource.onerror = () => { console.warn('[Workbook SSE] connection error'); };
+}
+
+function wbCloseSSE(){
+  if(wbEventSource){ wbEventSource.close(); wbEventSource=null; }
+}
+
+function wbHandleEvent(ev){
+  const {event:type, data} = ev;
+  switch(type){
+    case 'job_start':
+      addRunStep(`Preparing filter for ${(data.countries||[]).map(c=>c.name).join(', ')}`,'plain');
+      break;
+
+    case 'slot_start':
+      wbCurrentSlotSheetsDone=0; wbCurrentSlotSheetsTotal=0; wbIndeterminate=true;
+      addRunStep(`Slot ${data.slot} — ${data.file_name||'workbook'}`,'slot');
+      updateProgress();
+      break;
+
+    case 'slot_loading':
+      setProgressSub(`Slot ${data.slot} of ${wbTotalSlots}`);
+      addRunStep('Loading reference workbook — large files can take a few minutes…','write');
+      break;
+
+    case 'slot_classified':
+      wbIndeterminate=false;
+      wbCurrentSlotSheetsTotal = data.csf_sheet_count||0;
+      addRunStep(`Found ${data.csf_sheet_count} country-specific sheet${data.csf_sheet_count===1?'':'s'} of ${data.total_sheets} total`,'plain');
+      updateProgress();
+      break;
+
+    case 'sheet_start':
+      addRunStep(`Filtering "${data.sheet}"…`,'plain');
+      break;
+
+    case 'sheet_done':
+      wbCurrentSlotSheetsDone++;
+      addRunStep(`"${data.sheet}" — kept ${data.kept}, removed ${data.removed}`,'plain');
+      updateProgress();
+      break;
+
+    case 'slot_saving':
+      addRunStep('Saving workbook…','write');
+      break;
+
+    case 'slot_done':
+      wbCompletedSlots++;
+      wbIndeterminate=false;
+      addRunStep(`Slot ${data.slot} complete — ${data.size_kb} KB`,'done');
+      updateProgress();
+      break;
+
+    case 'slot_error':
+      wbCompletedSlots++;
+      wbIndeterminate=false;
+      addRunStep(`Slot ${data.slot} failed — ${data.message}`,'err');
+      updateProgress();
+      break;
+
+    case 'job_complete':
+      wbCloseSSE();
+      wbShowResults(data);
+      break;
+
+    case 'job_error':
+      wbCloseSSE();
+      wbFail(data.message||'Generation failed');
+      break;
+
+    case 'error':
+      wbCloseSSE();
+      wbFail(data.message||'Job not found');
+      break;
+
+    case 'stream_end':
+      wbCloseSSE();
+      break;
+  }
+}
+
+function setProgress(pct, title, sub){
+  const fill = document.getElementById('progressFill');
+  fill.classList.toggle('indeterminate', wbIndeterminate);
+  if(!wbIndeterminate) fill.style.width = Math.max(4,Math.min(100,pct))+'%';
+  if(title!==undefined) document.getElementById('progressTitle').textContent = title;
+  if(sub!==undefined) document.getElementById('progressSub').textContent = sub;
+}
+
+function setProgressSub(sub){ document.getElementById('progressSub').textContent = sub; }
+
+function updateProgress(){
+  const perSlot = 100/Math.max(wbTotalSlots,1);
+  const withinSlot = wbCurrentSlotSheetsTotal ? (wbCurrentSlotSheetsDone/wbCurrentSlotSheetsTotal) : 0;
+  const pct = (wbCompletedSlots + withinSlot) * perSlot;
+  const title = wbCompletedSlots>=wbTotalSlots
+    ? 'Finishing up…'
+    : `Generating workbook ${wbCompletedSlots+1} of ${wbTotalSlots}…`;
+  setProgress(pct, title, `${wbCompletedSlots} / ${wbTotalSlots} complete`);
+}
+
+/* ── Live log ───────────────────────────────────── */
+function addRunStep(text, kind){
   const log = document.getElementById('runLog');
   const div = document.createElement('div');
-  div.className = 'run-step running';
-  const chip = tool
-    ? `<span class="toolchip ${tool}"><svg viewBox="0 0 24 24" width="12" height="12">${tool==='llm'?'<path d="M13 2L4 14h6l-1 8 9-12h-6z" fill="currentColor" stroke="none"/>':'<path d="M4 20h16"/><path d="M14.5 4.5l4 4L8 19l-4.5.9L4.5 15.5z" fill="none" stroke="currentColor" stroke-width="1.9"/>'}</svg>${tool==='llm'?'Claude':'Write'}</span>`
+  const cls = ['run-step','running'];
+  if(kind==='slot') cls.push('slot-header');
+  if(kind==='err') cls.push('err');
+  div.className = cls.join(' ');
+  const chip = kind==='write'
+    ? `<span class="toolchip write"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M4 20h16"/><path d="M14.5 4.5l4 4L8 19l-4.5.9L4.5 15.5z" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>Write</span>`
     : '';
-  div.innerHTML = `<span class="sd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></span><span class="sx">${esc(text)}${chip}</span>`;
+  const icon = kind==='err'
+    ? '<path d="M6 6l12 12M18 6L6 18"/>'
+    : '<path d="M5 12l4 4 10-10"/>';
+  div.innerHTML = `<span class="sd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">${icon}</svg></span><span class="sx">${esc(text)}${chip}</span>`;
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
   const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
   setTimeout(()=>div.classList.remove('running'), reduce?0:400);
 }
 
-function doDownload(){
-  if(!genBlob) return;
-  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,16);
-  const fname = 'EC_ConfigWorkbook_'+ts+'.xlsx';
-  const url = URL.createObjectURL(genBlob);
-  const a = document.createElement('a'); a.href=url; a.download=fname; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),5000);
+/* ── Results ────────────────────────────────────── */
+function wbShowResults(data){
+  const slotResults = data.slots || [];
+  document.getElementById('runPanel').style.display='none';
+  document.getElementById('resultsPanel').style.display='';
+
+  if(!slotResults.length){
+    wbFail('No workbooks were generated — check the live run log above for slot errors.');
+    document.getElementById('resultsPanel').style.display='none';
+    document.getElementById('runPanel').style.display='';
+    return;
+  }
+
+  document.getElementById('resultsTitle').textContent =
+    slotResults.length===1 ? 'Workbook ready' : `${slotResults.length} workbooks ready`;
+
+  const zipCard = document.getElementById('zipCard');
+  if(data.zip_available && slotResults.length>1){
+    zipCard.style.display='flex';
+    document.getElementById('zipMeta').textContent = `${slotResults.length} files bundled together`;
+    document.getElementById('zipDlBtn').href = API+`/workbook/generate/download/${wbJobId}/zip`;
+  } else {
+    zipCard.style.display='none';
+  }
+
+  const cardsWrap = document.getElementById('fileCards');
+  cardsWrap.innerHTML = slotResults.map(s => `
+    <div class="artifact">
+      <span class="ai">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h5"/></svg>
+      </span>
+      <div style="flex:1">
+        <div class="an">${esc(s.file_name)}</div>
+        <div class="am">Slot ${s.slot} &middot; ${s.size_kb} KB</div>
+      </div>
+      <a class="btn ok dlbtn" href="${API}/workbook/generate/download/${wbJobId}/${s.slot}" download>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 20h14"/></svg>
+        Download
+      </a>
+    </div>
+  `).join('');
+
+  toast(slotResults.length===1 ? 'Workbook ready — click Download' : `${slotResults.length} workbooks ready`);
+}
+
+function wbFail(message){
+  wbCloseSSE();
+  addRunStep('Error: '+message,'err');
+  document.getElementById('genErr').innerHTML =
+    mkNotice('err','Generation failed',esc(message));
+  document.getElementById('genActions').style.display='';
 }
 
 function startOver(){
-  sowFile=null; countries=[]; slots=[]; genBlob=null;
+  wbCloseSSE();
+  sowFile=null; countries=[]; slots=[];
+  wbJobId=null; wbTotalSlots=0; wbCompletedSlots=0;
   document.getElementById('sowFile').value='';
   document.getElementById('sowFileCard').style.display='none';
   document.getElementById('btnExtract').disabled=true;
@@ -870,7 +1060,7 @@ function startOver(){
   document.getElementById('genActions').style.display='';
   document.getElementById('runPanel').style.display='none';
   document.getElementById('runLog').innerHTML='';
-  document.getElementById('dlPanel').style.display='none';
+  document.getElementById('resultsPanel').style.display='none';
   document.getElementById('genErr').innerHTML='';
   setStep(1);
 }

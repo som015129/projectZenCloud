@@ -25,6 +25,7 @@ import base64
 import struct
 import asyncio
 from pathlib import Path
+from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple, Any
 
 import openpyxl
@@ -456,23 +457,6 @@ def _stream_real_rows(ws, max_gap: int = 10000):
                 return
 
 
-def _detached_style(value):
-    """
-    Return a detached, independently-assignable copy of a Font/Fill/
-    Border/Alignment style value.
-
-    On an eager-mode cell, cell.font (etc.) returns a live StyleProxy
-    tied to that cell's position in the shared style table — copy() is
-    required to get a plain, independently assignable object. On a
-    read-only cell, cell.font already returns a plain, detached object
-    with no .copy() method (AttributeError), because there's no live
-    style table position to be proxying in the first place. Handle both
-    by copying only when the object actually supports it.
-    """
-    copy_fn = getattr(value, "copy", None)
-    return copy_fn() if copy_fn else value
-
-
 # ── Main public functions ────────────────────────────────────────────────────
 
 async def extract_countries_from_document(file_data_b64: str, file_name: str) -> List[Dict[str, str]]:
@@ -711,18 +695,28 @@ def classify_sheets(wb: openpyxl.Workbook) -> Dict[str, Dict]:
             result[sheet_name] = {"type": "meta"}
             continue
 
-        # Check if globally excluded by name
-        if any(kw in low for kw in GLOBAL_TAB_KEYWORDS):
-            result[sheet_name] = {"type": "global"}
-            continue
-
-        # Try to find a country column in the sheet data
+        # Try to find a country column in the sheet data BEFORE falling back
+        # to a keyword match on the tab name. A real detected country column
+        # is a far stronger, more specific signal than a substring match —
+        # verified against a real SF EC workbook: "CSF Personal Info (Global
+        # Info)" contains "global" (from its own "Global Info" suffix) and
+        # was being short-circuited into the global bucket before this check
+        # ever ran, even though it has the same country-column structure as
+        # every other CSF sheet in the file and its name literally starts
+        # with "CSF".
         country_col = _find_country_column(ws)
         header_row = _get_header_row(ws)
 
         if country_col:
             result[sheet_name] = {"type": "csf", "country_col": country_col, "header_row": header_row}
-        elif _is_csf_tab_by_name(sheet_name):
+            continue
+
+        # Check if globally excluded by name
+        if any(kw in low for kw in GLOBAL_TAB_KEYWORDS):
+            result[sheet_name] = {"type": "global"}
+            continue
+
+        if _is_csf_tab_by_name(sheet_name):
             # Tab name pattern suggests CSF — scan first data column for country codes
             result[sheet_name] = {"type": "csf", "country_col": None, "header_row": header_row}
         else:
@@ -731,137 +725,68 @@ def classify_sheets(wb: openpyxl.Workbook) -> Dict[str, Dict]:
     return result
 
 
-def _matches_country(cell_value: Any, in_scope_iso3: set, in_scope_names: set) -> bool:
-    """Check if a cell value matches one of the in-scope countries."""
-    if cell_value is None:
-        return False
-    val = str(cell_value).strip().lower()
-    if not val:
-        return False
-    # Direct ISO-3 match
-    if val.upper() in in_scope_iso3:
-        return True
-    # Full name match
-    if val in in_scope_names:
-        return True
-    # Alias lookup
-    mapped = _normalise_country(val)
-    if mapped and mapped in in_scope_iso3:
-        return True
-    return False
-
-
-def filter_workbook(
-    source_wb: openpyxl.Workbook,
-    in_scope_countries: List[Dict[str, str]],
-    label: str = "Workbook",
-) -> openpyxl.Workbook:
+def _filter_sheet_rows_in_place(ws, info: Dict, iso3_set: set) -> Tuple[int, int]:
     """
-    Create a new workbook containing:
-    - All global sheets copied as-is
-    - All meta sheets copied as-is
-    - CSF sheets filtered to only rows whose country column is in in_scope_countries
+    Delete rows from a CSF worksheet that belong to an out-of-scope
+    country, in place — nothing else about the sheet (styles, merged
+    cells, data validations, conditional formatting, frozen panes, row
+    heights, column widths) is ever touched, so it stays exactly as
+    authored in the grounded file.
 
-    Returns a new openpyxl.Workbook.
+    A row is only ever a delete candidate if its country-column cell
+    actually resolves to a recognised country — if it doesn't (blank,
+    a column header/label, section documentation, anything else that
+    isn't naming a specific country), the row is always kept untouched.
+    This is deliberately NOT gated on header_row: real SF EC CSF sheets
+    can have a more complex layout than "header row(s), then immediate
+    data" — e.g. a field-definition/documentation block before the
+    actual per-country data table starts much further down. Using a
+    single guessed header_row cutoff as "everything after this is
+    filterable data" was deleting that documentation block wholesale
+    (verified against this exact shape locally). Driving the decision
+    off whether the cell resolves to a country at all sidesteps needing
+    to know where any such boundary actually falls.
+
+    Rows are collected first, then deleted from the bottom up so
+    earlier row indices stay valid as deletion shifts things.
+
+    Returns (kept_count, removed_count).
     """
-    iso3_set = {c.get("iso3", "").upper() for c in in_scope_countries if c.get("iso3")}
-    name_set  = {c.get("name", "").lower() for c in in_scope_countries if c.get("name")}
+    country_col = info.get("country_col")
 
-    sheet_classification = classify_sheets(source_wb)
-    out_wb = openpyxl.Workbook()
-    out_wb.remove(out_wb.active)  # remove default blank sheet
+    rows_to_delete: List[int] = []
+    kept = 0
 
-    # Copy each sheet
-    for sheet_name in source_wb.sheetnames:
-        info = sheet_classification.get(sheet_name, {"type": "global"})
-        src_ws = source_wb[sheet_name]
-        dst_ws = out_wb.create_sheet(title=sheet_name)
-
-        if info["type"] in ("global", "meta"):
-            # Copy only genuinely populated cells — not a dense
-            # ws.max_row x ws.max_column grid, which can be orders of
-            # magnitude larger than actual content (see _stream_real_rows).
-            for row_idx, col_cells in _stream_real_rows(src_ws):
-                for col_idx, cell in col_cells:
-                    dst_cell = dst_ws.cell(row=row_idx, column=col_idx, value=cell.value)
-                    if cell.has_style:
-                        try:
-                            dst_cell.font      = _detached_style(cell.font)
-                            dst_cell.fill      = _detached_style(cell.fill)
-                            dst_cell.border    = _detached_style(cell.border)
-                            dst_cell.alignment = _detached_style(cell.alignment)
-                            dst_cell.number_format = cell.number_format
-                        except Exception:
-                            pass
+    for row_idx, col_cells in _stream_real_rows(ws):
+        resolved: Optional[str] = None
+        if country_col:
+            for col_idx, cell in col_cells:
+                if col_idx == country_col:
+                    resolved = _resolve_iso3(cell.value)
+                    break
         else:
-            # CSF sheet — filter rows
-            country_col  = info.get("country_col")
-            header_row   = info.get("header_row", 1)
-            out_row_idx  = 0
-            kept_rows    = 0
+            # No explicit country column found — check the first 5
+            # columns of the row for any value that resolves to a
+            # country (conservative: the first hit wins).
+            for col_idx, cell in col_cells:
+                if col_idx > 5:
+                    break
+                resolved = _resolve_iso3(cell.value)
+                if resolved:
+                    break
 
-            for row_idx, col_cells in _stream_real_rows(src_ws):
-                # Always copy rows up to and including header
-                if row_idx <= header_row:
-                    out_row_idx += 1
-                    for col_idx, cell in col_cells:
-                        dst_cell = dst_ws.cell(row=out_row_idx, column=col_idx, value=cell.value)
-                        if cell.has_style:
-                            try:
-                                dst_cell.font      = _detached_style(cell.font)
-                                dst_cell.fill      = _detached_style(cell.fill)
-                                dst_cell.border    = _detached_style(cell.border)
-                                dst_cell.alignment = _detached_style(cell.alignment)
-                                dst_cell.number_format = cell.number_format
-                            except Exception:
-                                pass
-                    continue
+        if resolved is None:
+            # Not a country-specific data row — leave it exactly as-is.
+            kept += 1
+        elif resolved in iso3_set:
+            kept += 1
+        else:
+            rows_to_delete.append(row_idx)
 
-                # For data rows: check country filter
-                include_row = False
-                if country_col:
-                    cv = None
-                    for col_idx, cell in col_cells:
-                        if col_idx == country_col:
-                            cv = cell.value
-                            break
-                    include_row = _matches_country(cv, iso3_set, name_set)
-                else:
-                    # No explicit country column found — check the first 5
-                    # columns of the row for a value matching an in-scope
-                    # country (conservative: keep if any match)
-                    for col_idx, cell in col_cells:
-                        if col_idx > 5:
-                            break
-                        if _matches_country(cell.value, iso3_set, name_set):
-                            include_row = True
-                            break
+    for row_idx in reversed(rows_to_delete):
+        ws.delete_rows(row_idx, 1)
 
-                if include_row:
-                    out_row_idx += 1
-                    kept_rows += 1
-                    for col_idx, cell in col_cells:
-                        dst_cell = dst_ws.cell(row=out_row_idx, column=col_idx, value=cell.value)
-                        if cell.has_style:
-                            try:
-                                dst_cell.font      = _detached_style(cell.font)
-                                dst_cell.fill      = _detached_style(cell.fill)
-                                dst_cell.border    = _detached_style(cell.border)
-                                dst_cell.alignment = _detached_style(cell.alignment)
-                                dst_cell.number_format = cell.number_format
-                            except Exception:
-                                pass
-
-            print(f"  [CSF filter] {sheet_name}: kept {kept_rows} rows for {len(iso3_set)} countries")
-
-        # Copy column widths
-        try:
-            for col_letter, col_dim in src_ws.column_dimensions.items():
-                dst_ws.column_dimensions[col_letter].width = col_dim.width
-        except Exception:
-            pass
-
-    return out_wb
+    return kept, len(rows_to_delete)
 
 
 def _add_summary_sheet(out_wb: openpyxl.Workbook, in_scope_countries: List[Dict[str, str]], source_count: int) -> None:
@@ -888,119 +813,215 @@ def _find_slot_file(slot_info: Dict, refs_dir: Path) -> Optional[Path]:
     return None
 
 
-def _generate_filtered_workbook_sync(
-    slot_files: List[Dict],
-    in_scope_countries: List[Dict[str, str]],
-    refs_dir: Path,
-) -> Optional[bytes]:
+def load_workbook_for_editing(ref_file_path: str) -> Optional[openpyxl.Workbook]:
     """
-    Load each slot file, filter CSF sheets to in-scope countries,
-    and produce a combined .xlsx output as bytes.
+    Load a workbook in fully writable (eager) mode — required for the
+    generate/filter path, which deletes disqualified CSF rows in place
+    on the loaded object rather than rebuilding a new workbook cell by
+    cell. That guarantees exact fidelity (styles, merged cells, data
+    validations, conditional formatting, frozen panes, tab colors, row
+    heights, formulas) since nothing but the removed rows is ever
+    touched — this file is never edited on disk either; the original
+    ref file stays untouched and only this in-memory copy is modified,
+    then saved to a new output buffer.
 
-    If only one slot, the filtered workbook is used directly (a summary sheet
-    is inserted at the front) — no second cell-by-cell copy pass, since that
-    was doubling the (already expensive, style-preserving) copy work for the
-    common case and could stall the request on large real-world workbooks.
-    If multiple slots, sheets from each are merged into one combined workbook
-    (prefixed with slot number if name collides).
+    data_only=False preserves formulas rather than collapsing them to
+    their last cached value. The detection-only loader
+    (load_workbook_from_path) uses data_only=True + read_only=True on
+    purpose, since it only ever reads values and never saves the
+    result — this loader is for the path that does.
 
-    Returns raw xlsx bytes or None on failure.
+    Trade-off: eager loading was measured at 250-400s against a real
+    ~3.3MB, 32-sheet SF EC workbook, versus 15-30s in read-only mode.
+    That cost is accepted here in exchange for fidelity, which is why
+    generation runs as a background job with progress streaming
+    (run_workbook_generation) instead of a single blocking request.
     """
-    country_labels = ", ".join(c.get("iso3", c.get("name", "")) for c in in_scope_countries)
-    print(f"[workbook_processor] Generating for countries: {country_labels}")
-
-    # ── Single slot: filter in place, skip the redundant second copy ──────────
-    if len(slot_files) == 1:
-        slot_info = slot_files[0]
-        file_path = _find_slot_file(slot_info, refs_dir)
-        if not file_path or not file_path.exists():
-            print(f"  [slot {slot_info.get('slot', 1)}] file not found: {slot_info.get('ref_id', '')}")
-            return None
-
-        src_wb = load_workbook_from_path(str(file_path))
-        if not src_wb:
-            return None
-
-        out_wb = filter_workbook(src_wb, in_scope_countries, label=f"Slot {slot_info.get('slot', 1)}")
-        _add_summary_sheet(out_wb, in_scope_countries, source_count=1)
-
-        buf = io.BytesIO()
-        out_wb.save(buf)
-        return buf.getvalue()
-
-    # ── Multiple slots: merge filtered sheets from each into one workbook ─────
-    out_wb = openpyxl.Workbook()
-    out_wb.remove(out_wb.active)
-    _add_summary_sheet(out_wb, in_scope_countries, source_count=len(slot_files))
-    existing_sheet_names: set = {"_Summary"}
-
-    for slot_info in slot_files:
-        slot_num  = slot_info.get("slot", 1)
-        file_path = _find_slot_file(slot_info, refs_dir)
-
-        if not file_path or not file_path.exists():
-            print(f"  [slot {slot_num}] file not found: {slot_info.get('ref_id', '')}")
-            continue
-
-        src_wb = load_workbook_from_path(str(file_path))
-        if not src_wb:
-            continue
-
-        filtered_wb = filter_workbook(src_wb, in_scope_countries, label=f"Slot {slot_num}")
-
-        # Copy sheets into combined workbook
-        for sheet_name in filtered_wb.sheetnames:
-            # Handle name collision when multiple slots have same sheet names
-            dest_name = f"S{slot_num}_{sheet_name}"[:31]
-            if dest_name in existing_sheet_names:
-                dest_name = (dest_name[:28] + f"_{slot_num}")[:31]
-            existing_sheet_names.add(dest_name)
-
-            src_ws  = filtered_wb[sheet_name]
-            dst_ws  = out_wb.create_sheet(title=dest_name)
-
-            for row_idx, col_cells in _stream_real_rows(src_ws):
-                for col_idx, cell in col_cells:
-                    dst_cell = dst_ws.cell(row=row_idx, column=col_idx, value=cell.value)
-                    if cell.has_style:
-                        try:
-                            dst_cell.font      = _detached_style(cell.font)
-                            dst_cell.fill      = _detached_style(cell.fill)
-                            dst_cell.border    = _detached_style(cell.border)
-                            dst_cell.alignment = _detached_style(cell.alignment)
-                            dst_cell.number_format = cell.number_format
-                        except Exception:
-                            pass
-            try:
-                for col_letter, col_dim in src_ws.column_dimensions.items():
-                    dst_ws.column_dimensions[col_letter].width = col_dim.width
-            except Exception:
-                pass
-
-    if len(out_wb.sheetnames) <= 1:
-        # Only summary sheet — no workbook data was filtered
-        print("[workbook_processor] No sheets produced after filtering")
-
-    buf = io.BytesIO()
-    out_wb.save(buf)
-    return buf.getvalue()
-
-
-async def generate_filtered_workbook(
-    slot_files: List[Dict],  # [{"slot": 1, "path": "...", "file_name": "...", "ref_id": "..."}, ...]
-    in_scope_countries: List[Dict[str, str]],
-    refs_dir: Path,
-) -> Optional[bytes]:
-    """
-    Async wrapper around _generate_filtered_workbook_sync.
-
-    The actual filtering/copying is synchronous, CPU-bound openpyxl work that
-    can take a long time on real-world multi-sheet, multi-thousand-row SF EC
-    workbooks. Running it inline in the event loop would block the single
-    uvicorn worker for the whole duration — starving health checks and every
-    other in-flight request, and risking the connection being dropped before
-    a response is ever sent. asyncio.to_thread moves it off the event loop.
-    """
-    if not slot_files or not in_scope_countries:
+    try:
+        return openpyxl.load_workbook(ref_file_path, data_only=False, read_only=False)
+    except Exception as e:
+        print(f"[workbook_processor] eager load error {ref_file_path}: {e}")
         return None
-    return await asyncio.to_thread(_generate_filtered_workbook_sync, slot_files, in_scope_countries, refs_dir)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Background job orchestration + SSE progress for workbook generation
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Mirrors the in-memory SSE queue pattern the cascade feature uses (see
+# context_store.py) but is fully independent of it — this module owns
+# its own job/queue/result state; nothing here touches cascade code.
+
+_workbook_sse_queues: Dict[str, asyncio.Queue] = {}
+_workbook_job_results: "OrderedDict[str, Dict[str, Any]]" = OrderedDict()
+_MAX_RETAINED_JOB_RESULTS = 5
+
+
+def create_workbook_job(job_id: str) -> asyncio.Queue:
+    q: asyncio.Queue = asyncio.Queue(maxsize=1000)
+    _workbook_sse_queues[job_id] = q
+    return q
+
+
+def get_workbook_queue(job_id: str) -> Optional[asyncio.Queue]:
+    return _workbook_sse_queues.get(job_id)
+
+
+async def emit_workbook_event(job_id: str, event_type: str, data: Dict[str, Any]) -> None:
+    q = _workbook_sse_queues.get(job_id)
+    if q:
+        try:
+            await asyncio.wait_for(q.put({"event": event_type, "data": data}), timeout=2.0)
+        except (asyncio.TimeoutError, asyncio.QueueFull):
+            pass  # Non-blocking — never block generation on a slow/gone client
+
+
+def end_workbook_stream(job_id: str) -> None:
+    q = _workbook_sse_queues.get(job_id)
+    if q:
+        try:
+            q.put_nowait(None)
+        except asyncio.QueueFull:
+            pass
+
+
+def cleanup_workbook_queue(job_id: str) -> None:
+    """Remove the queue after the SSE stream closes."""
+    _workbook_sse_queues.pop(job_id, None)
+
+
+def store_workbook_result(job_id: str, slots: List[Dict[str, Any]]) -> None:
+    """
+    Keep generated file bytes in memory, keyed by job_id, for the
+    download endpoints. Evicts the oldest job once more than
+    _MAX_RETAINED_JOB_RESULTS are held — results aren't persisted to
+    disk/DB (consistent with the cascade feature's in-memory-only
+    session state; this is a low-traffic admin tool).
+    """
+    _workbook_job_results[job_id] = {"slots": slots}
+    while len(_workbook_job_results) > _MAX_RETAINED_JOB_RESULTS:
+        _workbook_job_results.popitem(last=False)
+
+
+def get_workbook_result(job_id: str) -> Optional[Dict[str, Any]]:
+    return _workbook_job_results.get(job_id)
+
+
+def _generate_one_slot_sync(
+    slot_info: Dict,
+    in_scope_countries: List[Dict[str, str]],
+    refs_dir: Path,
+    progress_cb,
+) -> Optional[bytes]:
+    """
+    Synchronous, CPU-bound per-slot pipeline: load eagerly, filter CSF
+    sheets in place, save. Runs inside asyncio.to_thread; progress_cb
+    is safe to call from this worker thread (see run_workbook_generation).
+    """
+    slot_num = slot_info.get("slot", 1)
+
+    file_path = _find_slot_file(slot_info, refs_dir)
+    if not file_path or not file_path.exists():
+        progress_cb("slot_error", {"slot": slot_num, "message": "Reference file not found on disk"})
+        return None
+
+    progress_cb("slot_loading", {"slot": slot_num, "file_name": slot_info.get("file_name", "")})
+    wb = load_workbook_for_editing(str(file_path))
+    if not wb:
+        progress_cb("slot_error", {"slot": slot_num, "message": "Could not open workbook — file may be corrupt"})
+        return None
+
+    classification = classify_sheets(wb)
+    csf_sheet_names = [name for name, info in classification.items() if info["type"] == "csf"]
+    progress_cb("slot_classified", {
+        "slot": slot_num,
+        "total_sheets": len(wb.sheetnames),
+        "csf_sheet_count": len(csf_sheet_names),
+        "csf_sheets": csf_sheet_names,
+    })
+
+    iso3_set = {c.get("iso3", "").upper() for c in in_scope_countries if c.get("iso3")}
+
+    for sheet_name in csf_sheet_names:
+        progress_cb("sheet_start", {"slot": slot_num, "sheet": sheet_name})
+        ws = wb[sheet_name]
+        kept, removed = _filter_sheet_rows_in_place(ws, classification[sheet_name], iso3_set)
+        progress_cb("sheet_done", {"slot": slot_num, "sheet": sheet_name, "kept": kept, "removed": removed})
+        print(f"  [CSF filter] slot {slot_num} — {sheet_name}: kept {kept}, removed {removed}")
+
+    _add_summary_sheet(wb, in_scope_countries, source_count=1)
+
+    progress_cb("slot_saving", {"slot": slot_num})
+    buf = io.BytesIO()
+    wb.save(buf)
+    xlsx_bytes = buf.getvalue()
+
+    progress_cb("slot_done", {
+        "slot": slot_num,
+        "file_name": slot_info.get("file_name", ""),
+        "size_kb": round(len(xlsx_bytes) / 1024, 1),
+    })
+    return xlsx_bytes
+
+
+async def run_workbook_generation(
+    job_id: str,
+    in_scope_countries: List[Dict[str, str]],
+    slot_files: List[Dict],
+    refs_dir: Path,
+) -> None:
+    """
+    Background orchestrator for a workbook generation job: processes
+    each grounded slot in turn — sequentially, since each slot's eager
+    load is itself CPU-heavy enough that parallelizing would just
+    contend for the same core — streaming progress via SSE, and
+    produces one output file per slot (never merged: each grounded
+    workbook keeps its own identity and formatting).
+    """
+    loop = asyncio.get_running_loop()
+
+    def progress_cb(event_type: str, data: Dict[str, Any]) -> None:
+        asyncio.run_coroutine_threadsafe(emit_workbook_event(job_id, event_type, data), loop)
+
+    country_labels = ", ".join(c.get("iso3", c.get("name", "")) for c in in_scope_countries)
+    await emit_workbook_event(job_id, "job_start", {
+        "total_slots": len(slot_files),
+        "countries": in_scope_countries,
+    })
+    print(f"[workbook_processor] Job {job_id}: generating for {country_labels} across {len(slot_files)} slot(s)")
+
+    results: List[Dict[str, Any]] = []
+    try:
+        for slot_info in slot_files:
+            slot_num = slot_info.get("slot", 1)
+            await emit_workbook_event(job_id, "slot_start", {
+                "slot": slot_num,
+                "file_name": slot_info.get("file_name", ""),
+            })
+
+            xlsx_bytes = await asyncio.to_thread(
+                _generate_one_slot_sync, slot_info, in_scope_countries, refs_dir, progress_cb,
+            )
+
+            if xlsx_bytes:
+                country_codes = "_".join(c.get("iso3", "") for c in in_scope_countries[:5])
+                base_name = Path(slot_info.get("file_name", f"Workbook_{slot_num}")).stem
+                out_name = f"{base_name}_{country_codes}.xlsx"
+                results.append({
+                    "slot": slot_num,
+                    "file_name": out_name,
+                    "size_kb": round(len(xlsx_bytes) / 1024, 1),
+                    "bytes": xlsx_bytes,
+                })
+
+        store_workbook_result(job_id, results)
+        await emit_workbook_event(job_id, "job_complete", {
+            "slots": [{"slot": r["slot"], "file_name": r["file_name"], "size_kb": r["size_kb"]} for r in results],
+            "zip_available": len(results) > 1,
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        await emit_workbook_event(job_id, "job_error", {"message": str(e)})
+    finally:
+        end_workbook_stream(job_id)
