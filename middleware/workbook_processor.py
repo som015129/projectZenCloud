@@ -126,6 +126,10 @@ _EXTRA_COUNTRY_ALIASES: Dict[str, str] = {
     "russian federation": "RUS", "syrian arab republic": "SYR", "lao pdr": "LAO",
     "brunei darussalam": "BRN", "viet nam": "VNM", "east timor": "TLS",
     "palestinian territories": "PSE",
+    # Not part of the official ISO 3166-1 list (disputed status), but
+    # SAP SuccessFactors ships it as a selectable country/CSF value in
+    # real EC config workbooks — verified against production data.
+    "kosovo": "XKX", "xkx": "XKX",
 }
 
 
@@ -329,11 +333,18 @@ def _extract_unicode_strings(raw_bytes: bytes, min_len: int = 4) -> str:
 # Derived from the same master list COUNTRY_ALIASES is built from, so every
 # code that can be *detected* also has a display name.
 ISO3_TO_NAME: Dict[str, str] = {alpha3: name for _, alpha3, name in _ISO_COUNTRIES}
+ISO3_TO_NAME["XKX"] = "Kosovo"  # see _EXTRA_COUNTRY_ALIASES — not in ISO 3166-1
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-_NAME_CODE_RE = re.compile(r'^(.*?)\s*\(([A-Za-z]{2,3})\)\s*$')
+# Closing paren is optional: a real production "CSF Job Info" sheet has
+# "Tunisia (TUN" (no closing paren) for every Tunisia row, while other
+# sheets in the same workbook have the well-formed "Tunisia (TUN)" —
+# an inconsistency in the source data itself. Requiring the closing
+# paren meant every Tunisia row in that one sheet silently failed to
+# resolve and was kept regardless of country selection.
+_NAME_CODE_RE = re.compile(r'^(.*?)\s*\(([A-Za-z]{2,3})\)?\s*$')
 
 
 def _normalise_country(raw: str) -> Optional[str]:
