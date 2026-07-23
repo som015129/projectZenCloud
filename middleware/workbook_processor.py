@@ -902,8 +902,19 @@ def _filter_picklists_sheet_in_place(ws, iso3_set: set) -> Tuple[int, int]:
     compacted positions in a single pass, and the now-unused trailing
     range is removed with exactly one delete_rows() call.
 
+    Any merged cells are unmerged first: a merge's non-anchor cells are
+    read-only ('MergedCell' object attribute 'value' is read-only'),
+    which the compaction rewrite below hits unconditionally for every
+    column position it writes, regardless of whether that particular
+    cell's content is actually changing. This sheet's merges are
+    confined to a small instructional header block, not the data rows
+    that matter for filtering, so the fidelity trade-off is contained.
+
     Returns (kept_count, removed_count).
     """
+    for merged_range in list(ws.merged_cells.ranges):
+        ws.unmerge_cells(str(merged_range))
+
     max_col = ws.max_column or 1
     kept_rows: List[Dict[int, tuple]] = []
     removed = 0
