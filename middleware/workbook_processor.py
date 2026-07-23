@@ -449,19 +449,29 @@ def _stream_real_rows(ws, max_gap: int = 10000):
     40,008-row sheet has zero gaps over 50 rows (so is read in full),
     while a sheet with real content ending at row ~1,062 had a single
     stray cell at row 1,048,573 — a >1,000,000-row gap that's cut here.
+
+    Row index is read from a populated cell's own .row, not derived
+    from enumerate() position. ws.iter_rows() (no min_row given) always
+    yields starting from actual row 1 — including leading fully-empty
+    rows — regardless of where ws.min_row says real content begins;
+    labeling yielded rows by counting from ws.min_row (as an earlier
+    version of this function did) silently mislabels every row by that
+    offset whenever a sheet's real content doesn't start at row 1
+    (confirmed: correct kept/removed *counts* but the wrong physical
+    rows deleted). Read-only mode's lightweight EmptyCell placeholders
+    for blank positions within a row lack .row entirely, which is why
+    this doesn't just take row[0].row — but every cell that lands in
+    `populated` below is guaranteed to be a real Cell/ReadOnlyCell
+    (EmptyCell always has value=None and no has_style attribute, so it
+    can never satisfy the filter condition), so populated[0][1].row is
+    always safe.
     """
     empty_streak = 0
-    start_row = getattr(ws, "min_row", None) or 1
-    for row_idx, row in enumerate(ws.iter_rows(), start=start_row):
-        # Read-only mode yields lightweight EmptyCell placeholders for
-        # blank positions within a row's populated range — they lack
-        # .has_style (and .row) entirely (only ReadOnlyCell/Cell have
-        # them), which is why row_idx comes from enumerate() above, not
-        # from any individual cell's .row attribute.
+    for row in ws.iter_rows():
         populated = [(c.column, c) for c in row if c.value is not None or getattr(c, "has_style", False)]
         if populated:
             empty_streak = 0
-            yield row_idx, populated
+            yield populated[0][1].row, populated
         else:
             empty_streak += 1
             if empty_streak > max_gap:
@@ -736,6 +746,30 @@ def classify_sheets(wb: openpyxl.Workbook) -> Dict[str, Dict]:
     return result
 
 
+def _delete_row_ranges(ws, rows_to_delete: List[int]) -> None:
+    """
+    Merge consecutive row numbers into contiguous (start, count) ranges
+    and delete each range with one ws.delete_rows() call, from the
+    bottom up. openpyxl's delete_rows shifts every remaining cell below
+    the deletion point on EVERY call — calling it once per individual
+    row is O(n^2) for a sheet with many rows to remove (confirmed: this
+    made a real ~1,500-row sheet with ~1,460 rows to delete hang for
+    10+ minutes). Merging into ranges cuts the call count down to the
+    number of contiguous deleted blocks, typically small since related
+    rows are themselves usually contiguous in these templates.
+    """
+    ranges: List[Tuple[int, int]] = []
+    for row_idx in rows_to_delete:
+        if ranges and row_idx == ranges[-1][0] + ranges[-1][1]:
+            start, count = ranges[-1]
+            ranges[-1] = (start, count + 1)
+        else:
+            ranges.append((row_idx, 1))
+
+    for start, count in reversed(ranges):
+        ws.delete_rows(start, count)
+
+
 def _filter_sheet_rows_in_place(ws, info: Dict, iso3_set: set) -> Tuple[int, int]:
     """
     Delete rows from a CSF worksheet that belong to an out-of-scope
@@ -757,17 +791,6 @@ def _filter_sheet_rows_in_place(ws, info: Dict, iso3_set: set) -> Tuple[int, int
     (verified against this exact shape locally). Driving the decision
     off whether the cell resolves to a country at all sidesteps needing
     to know where any such boundary actually falls.
-
-    Rows to delete are merged into contiguous (start, count) ranges and
-    removed with one delete_rows() call per range, from the bottom up.
-    openpyxl's delete_rows shifts every remaining cell below the
-    deletion point on EVERY call — calling it once per individual row
-    is O(n^2) for a sheet with many rows to remove, which is exactly
-    what made a real ~1,500-row CSF sheet with ~1,460 out-of-scope rows
-    hang for 10+ minutes in production. Merging consecutive row numbers
-    into ranges cuts the call count down to the number of contiguous
-    deleted blocks — typically a small handful, since a real country's
-    rows are themselves usually contiguous.
 
     Returns (kept_count, removed_count).
     """
@@ -802,17 +825,78 @@ def _filter_sheet_rows_in_place(ws, info: Dict, iso3_set: set) -> Tuple[int, int
         else:
             rows_to_delete.append(row_idx)
 
-    ranges: List[Tuple[int, int]] = []
-    for row_idx in rows_to_delete:
-        if ranges and row_idx == ranges[-1][0] + ranges[-1][1]:
-            start, count = ranges[-1]
-            ranges[-1] = (start, count + 1)
+    _delete_row_ranges(ws, rows_to_delete)
+    return kept, len(rows_to_delete)
+
+
+# Picklist IDs where the row's value column names the country directly
+# (rather than the ID itself carrying a country suffix) — see
+# _filter_picklists_sheet_in_place.
+_COUNTRY_MASTER_PICKLISTS = {"isocountrylist", "csfcountry", "country"}
+_PICKLIST_ID_SUFFIX_RE = re.compile(r'^(.+)_([A-Za-z]{3})$')
+
+
+def _filter_picklists_sheet_in_place(ws, iso3_set: set) -> Tuple[int, int]:
+    """
+    Filter the "Picklists" reference sheet to the in-scope countries.
+
+    This sheet has a different shape than CSF sheets — there's no
+    single country column. Verified directly against a real ~40,000-row
+    production "Picklists" sheet:
+
+    - The large majority of rows (verified: 35,760 of ~40,000) encode
+      the country as a suffix on the Picklist ID column itself, e.g.
+      "ACADEMICDEGREE_ARE" = the Academic Degree picklist's UAE variant
+      — not as a separate column value. Confirmed systematic (194
+      distinct base picklist names, each with 1-50 country variants),
+      not coincidental.
+    - A handful of specific picklists — ISOCountryList, csfCountry,
+      country — are themselves the master list of selectable countries:
+      every row has the SAME Picklist ID, and the country is named in
+      the External Code / Description columns instead.
+    - Everything else (Nationality, state, jobRegion, currency,
+      nameprefix, and single-value global picklists like BLOODGROUP)
+      has no reliable per-row country signal — e.g. Nationality rows
+      are demonyms ("Estonian") with no clean adjective-to-country
+      mapping, and state/jobRegion mix country-qualified and bare
+      values inconsistently. These are left untouched: wrongly
+      deleting them would remove valid global reference data, a worse
+      failure than leaving a few extra picklist rows in place.
+
+    Returns (kept_count, removed_count).
+    """
+    rows_to_delete: List[int] = []
+    kept = 0
+
+    for row_idx, col_cells in _stream_real_rows(ws):
+        col_map = {c: cell for c, cell in col_cells}
+        picklist_id_cell = col_map.get(3)
+        picklist_id = picklist_id_cell.value if picklist_id_cell else None
+
+        resolved: Optional[str] = None
+        if isinstance(picklist_id, str) and picklist_id.strip():
+            base_lower = picklist_id.strip().lower()
+            if base_lower in _COUNTRY_MASTER_PICKLISTS:
+                ext_cell  = col_map.get(4)
+                desc_cell = col_map.get(5)
+                resolved = (
+                    (_resolve_iso3(ext_cell.value) if ext_cell else None)
+                    or (_resolve_iso3(desc_cell.value) if desc_cell else None)
+                )
+            else:
+                m = _PICKLIST_ID_SUFFIX_RE.match(picklist_id.strip())
+                if m:
+                    resolved = _resolve_iso3(m.group(2))
+
+        if resolved is None:
+            # No reliable country signal — leave it exactly as-is.
+            kept += 1
+        elif resolved in iso3_set:
+            kept += 1
         else:
-            ranges.append((row_idx, 1))
+            rows_to_delete.append(row_idx)
 
-    for start, count in reversed(ranges):
-        ws.delete_rows(start, count)
-
+    _delete_row_ranges(ws, rows_to_delete)
     return kept, len(rows_to_delete)
 
 
@@ -991,6 +1075,18 @@ def _generate_one_slot_sync(
         kept, removed = _filter_sheet_rows_in_place(ws, classification[sheet_name], iso3_set)
         progress_cb("sheet_done", {"slot": slot_num, "sheet": sheet_name, "kept": kept, "removed": removed})
         print(f"  [CSF filter] slot {slot_num} — {sheet_name}: kept {kept}, removed {removed}")
+
+    # The "Picklists" reference sheet has a different shape than CSF
+    # sheets (no single country column — see _filter_picklists_sheet_in_place)
+    # so it isn't caught by classify_sheets' csf/global split and needs
+    # its own pass, matched by name since it's a standard SF EC tab.
+    picklists_name = next((n for n in wb.sheetnames if n.strip().lower() == "picklists"), None)
+    if picklists_name:
+        progress_cb("sheet_start", {"slot": slot_num, "sheet": picklists_name})
+        ws = wb[picklists_name]
+        kept, removed = _filter_picklists_sheet_in_place(ws, iso3_set)
+        progress_cb("sheet_done", {"slot": slot_num, "sheet": picklists_name, "kept": kept, "removed": removed})
+        print(f"  [Picklists filter] slot {slot_num} — {picklists_name}: kept {kept}, removed {removed}")
 
     _add_summary_sheet(wb, in_scope_countries, source_count=1)
 
