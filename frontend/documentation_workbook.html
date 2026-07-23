@@ -447,9 +447,14 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
 
               <div class="divider"></div>
               <label class="fl">Add Country Manually</label>
+              <p style="font-size:11.5px;color:var(--muted);margin:0 0 9px">
+                Type one or more country names, separated by commas (e.g. <em>USA, Taiwan, United Kingdom</em>).
+                Names already in the list above are selected automatically &mdash; anything new is added and selected.
+              </p>
               <div class="add-row">
-                <input class="fi" id="addName" placeholder="Country name (e.g. Vietnam)" style="flex:1"/>
-                <input class="fi sm" id="addISO" placeholder="ISO-3" maxlength="3" oninput="this.value=this.value.toUpperCase()"/>
+                <input class="fi" id="addName" placeholder="Country names, comma separated" style="flex:1"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();addManual();}"/>
+                <input class="fi sm" id="addISO" placeholder="ISO-3 (optional)" maxlength="3" oninput="this.value=this.value.toUpperCase()"/>
                 <button class="btn ghost sm" onclick="addManual()">+ Add</button>
               </div>
               <div id="addMsg"></div>
@@ -511,7 +516,6 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
                 <div class="sum-row"><span class="lbl">In-scope countries</span><span class="val" id="sumCountries">—</span></div>
                 <div class="sum-row"><span class="lbl">Reference workbook slots</span><span class="val" id="sumSlots">—</span></div>
                 <div class="sum-row"><span class="lbl">Output format</span><span class="val">XLSX — Microsoft Excel, one file per grounded workbook</span></div>
-                <div class="sum-row"><span class="lbl">Sheet strategy</span><span class="val">CSF rows for other countries deleted in place &nbsp;·&nbsp; everything else preserved exactly</span></div>
               </div>
 
               <!-- Actions -->
@@ -585,6 +589,121 @@ h1.vt{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink);marg
 
 <script>
 const API = (['localhost','127.0.0.1'].includes(location.hostname)) ? 'http://localhost:8000' : 'https://projectzen-cloudui.fly.dev';
+
+/* ── Country lookup (mirrors workbook_processor.py's ISO table) ──
+   Lets "Add Country Manually" resolve typed names/codes to an ISO-3
+   client-side, without the user having to know or type the code. */
+const ISO_COUNTRIES = [
+  ["AF","AFG","Afghanistan"],["AL","ALB","Albania"],["DZ","DZA","Algeria"],
+  ["AS","ASM","American Samoa"],["AD","AND","Andorra"],["AO","AGO","Angola"],
+  ["AI","AIA","Anguilla"],["AG","ATG","Antigua and Barbuda"],["AR","ARG","Argentina"],
+  ["AM","ARM","Armenia"],["AW","ABW","Aruba"],["AU","AUS","Australia"],
+  ["AT","AUT","Austria"],["AZ","AZE","Azerbaijan"],["BS","BHS","Bahamas"],
+  ["BH","BHR","Bahrain"],["BD","BGD","Bangladesh"],["BB","BRB","Barbados"],
+  ["BY","BLR","Belarus"],["BE","BEL","Belgium"],["BZ","BLZ","Belize"],
+  ["BJ","BEN","Benin"],["BM","BMU","Bermuda"],["BT","BTN","Bhutan"],
+  ["BO","BOL","Bolivia"],["BA","BIH","Bosnia and Herzegovina"],["BW","BWA","Botswana"],
+  ["BR","BRA","Brazil"],["BN","BRN","Brunei"],["BG","BGR","Bulgaria"],
+  ["BF","BFA","Burkina Faso"],["BI","BDI","Burundi"],["KH","KHM","Cambodia"],
+  ["CM","CMR","Cameroon"],["CA","CAN","Canada"],["CV","CPV","Cape Verde"],
+  ["KY","CYM","Cayman Islands"],["CF","CAF","Central African Republic"],["TD","TCD","Chad"],
+  ["CL","CHL","Chile"],["CN","CHN","China"],["CO","COL","Colombia"],
+  ["KM","COM","Comoros"],["CG","COG","Congo"],["CD","COD","Congo, Democratic Republic of the"],
+  ["CR","CRI","Costa Rica"],["CI","CIV","Cote d'Ivoire"],["HR","HRV","Croatia"],
+  ["CU","CUB","Cuba"],["CW","CUW","Curacao"],["CY","CYP","Cyprus"],
+  ["CZ","CZE","Czech Republic"],["DK","DNK","Denmark"],["DJ","DJI","Djibouti"],
+  ["DM","DMA","Dominica"],["DO","DOM","Dominican Republic"],["EC","ECU","Ecuador"],
+  ["EG","EGY","Egypt"],["SV","SLV","El Salvador"],["GQ","GNQ","Equatorial Guinea"],
+  ["ER","ERI","Eritrea"],["EE","EST","Estonia"],["SZ","SWZ","Eswatini"],
+  ["ET","ETH","Ethiopia"],["FJ","FJI","Fiji"],["FI","FIN","Finland"],
+  ["FR","FRA","France"],["GA","GAB","Gabon"],["GM","GMB","Gambia"],
+  ["GE","GEO","Georgia"],["DE","DEU","Germany"],["GH","GHA","Ghana"],
+  ["GI","GIB","Gibraltar"],["GR","GRC","Greece"],["GL","GRL","Greenland"],
+  ["GD","GRD","Grenada"],["GU","GUM","Guam"],["GT","GTM","Guatemala"],
+  ["GG","GGY","Guernsey"],["GN","GIN","Guinea"],["GW","GNB","Guinea-Bissau"],
+  ["GY","GUY","Guyana"],["HT","HTI","Haiti"],["HN","HND","Honduras"],
+  ["HK","HKG","Hong Kong"],["HU","HUN","Hungary"],["IS","ISL","Iceland"],
+  ["IN","IND","India"],["ID","IDN","Indonesia"],["IR","IRN","Iran"],
+  ["IQ","IRQ","Iraq"],["IE","IRL","Ireland"],["IM","IMN","Isle of Man"],
+  ["IL","ISR","Israel"],["IT","ITA","Italy"],["JM","JAM","Jamaica"],
+  ["JP","JPN","Japan"],["JE","JEY","Jersey"],["JO","JOR","Jordan"],
+  ["KZ","KAZ","Kazakhstan"],["KE","KEN","Kenya"],["KI","KIR","Kiribati"],
+  ["KP","PRK","North Korea"],["KR","KOR","South Korea"],["KW","KWT","Kuwait"],
+  ["KG","KGZ","Kyrgyzstan"],["LA","LAO","Laos"],["LV","LVA","Latvia"],
+  ["LB","LBN","Lebanon"],["LS","LSO","Lesotho"],["LR","LBR","Liberia"],
+  ["LY","LBY","Libya"],["LI","LIE","Liechtenstein"],["LT","LTU","Lithuania"],
+  ["LU","LUX","Luxembourg"],["MO","MAC","Macao"],["MG","MDG","Madagascar"],
+  ["MW","MWI","Malawi"],["MY","MYS","Malaysia"],["MV","MDV","Maldives"],
+  ["ML","MLI","Mali"],["MT","MLT","Malta"],["MH","MHL","Marshall Islands"],
+  ["MR","MRT","Mauritania"],["MU","MUS","Mauritius"],["MX","MEX","Mexico"],
+  ["FM","FSM","Micronesia"],["MD","MDA","Moldova"],["MC","MCO","Monaco"],
+  ["MN","MNG","Mongolia"],["ME","MNE","Montenegro"],["MA","MAR","Morocco"],
+  ["MZ","MOZ","Mozambique"],["MM","MMR","Myanmar"],["NA","NAM","Namibia"],
+  ["NR","NRU","Nauru"],["NP","NPL","Nepal"],["NL","NLD","Netherlands"],
+  ["NC","NCL","New Caledonia"],["NZ","NZL","New Zealand"],["NI","NIC","Nicaragua"],
+  ["NE","NER","Niger"],["NG","NGA","Nigeria"],["MK","MKD","North Macedonia"],
+  ["NO","NOR","Norway"],["OM","OMN","Oman"],["PK","PAK","Pakistan"],
+  ["PW","PLW","Palau"],["PS","PSE","Palestine"],["PA","PAN","Panama"],
+  ["PG","PNG","Papua New Guinea"],["PY","PRY","Paraguay"],["PE","PER","Peru"],
+  ["PH","PHL","Philippines"],["PL","POL","Poland"],["PT","PRT","Portugal"],
+  ["PR","PRI","Puerto Rico"],["QA","QAT","Qatar"],["RO","ROU","Romania"],
+  ["RU","RUS","Russia"],["RW","RWA","Rwanda"],["KN","KNA","Saint Kitts and Nevis"],
+  ["LC","LCA","Saint Lucia"],["VC","VCT","Saint Vincent and the Grenadines"],
+  ["WS","WSM","Samoa"],["SM","SMR","San Marino"],["ST","STP","Sao Tome and Principe"],
+  ["SA","SAU","Saudi Arabia"],["SN","SEN","Senegal"],["RS","SRB","Serbia"],
+  ["SC","SYC","Seychelles"],["SL","SLE","Sierra Leone"],["SG","SGP","Singapore"],
+  ["SK","SVK","Slovakia"],["SI","SVN","Slovenia"],["SB","SLB","Solomon Islands"],
+  ["SO","SOM","Somalia"],["ZA","ZAF","South Africa"],["SS","SSD","South Sudan"],
+  ["ES","ESP","Spain"],["LK","LKA","Sri Lanka"],["SD","SDN","Sudan"],
+  ["SR","SUR","Suriname"],["SE","SWE","Sweden"],["CH","CHE","Switzerland"],
+  ["SY","SYR","Syria"],["TW","TWN","Taiwan"],["TJ","TJK","Tajikistan"],
+  ["TZ","TZA","Tanzania"],["TH","THA","Thailand"],["TL","TLS","Timor-Leste"],
+  ["TG","TGO","Togo"],["TO","TON","Tonga"],["TT","TTO","Trinidad and Tobago"],
+  ["TN","TUN","Tunisia"],["TR","TUR","Turkey"],["TM","TKM","Turkmenistan"],
+  ["TV","TUV","Tuvalu"],["UG","UGA","Uganda"],["UA","UKR","Ukraine"],
+  ["AE","ARE","United Arab Emirates"],["GB","GBR","United Kingdom"],["US","USA","United States"],
+  ["UY","URY","Uruguay"],["UZ","UZB","Uzbekistan"],["VU","VUT","Vanuatu"],
+  ["VA","VAT","Vatican City"],["VE","VEN","Venezuela"],["VN","VNM","Vietnam"],
+  ["VG","VGB","British Virgin Islands"],["VI","VIR","U.S. Virgin Islands"],["YE","YEM","Yemen"],
+  ["ZM","ZMB","Zambia"],["ZW","ZWE","Zimbabwe"],
+];
+
+const EXTRA_COUNTRY_ALIASES = {
+  "uk":"GBR","great britain":"GBR","britain":"GBR",
+  "united states of america":"USA","america":"USA",
+  "prc":"CHN","mainland china":"CHN",
+  "korea":"KOR","republic of korea":"KOR","dprk":"PRK",
+  "the netherlands":"NLD","holland":"NLD",
+  "ivory coast":"CIV","czechia":"CZE","swaziland":"SWZ","burma":"MMR",
+  "dr congo":"COD","drc":"COD","zaire":"COD","republic of the congo":"COG",
+  "macedonia":"MKD","fyrom":"MKD","vatican":"VAT","holy see":"VAT",
+  "russian federation":"RUS","syrian arab republic":"SYR","lao pdr":"LAO",
+  "brunei darussalam":"BRN","viet nam":"VNM","east timor":"TLS",
+  "palestinian territories":"PSE","kosovo":"XKX","xkx":"XKX",
+};
+
+const COUNTRY_ALIASES = {};
+const ISO3_TO_NAME = { XKX: "Kosovo" };
+ISO_COUNTRIES.forEach(([a2,a3,name])=>{
+  COUNTRY_ALIASES[name.toLowerCase()] = a3;
+  COUNTRY_ALIASES[a2.toLowerCase()] = a3;
+  COUNTRY_ALIASES[a3.toLowerCase()] = a3;
+  ISO3_TO_NAME[a3] = name;
+});
+Object.assign(COUNTRY_ALIASES, EXTRA_COUNTRY_ALIASES);
+
+const NAME_CODE_RE = /^(.*?)\s*\(([A-Za-z]{2,3})\)?\s*$/;
+
+function resolveCountryIso3(raw){
+  const key = raw.trim().toLowerCase();
+  if(COUNTRY_ALIASES[key]) return COUNTRY_ALIASES[key];
+  const m = NAME_CODE_RE.exec(raw.trim());
+  if(m){
+    const code = m[2].trim().toLowerCase(), name = m[1].trim().toLowerCase();
+    return COUNTRY_ALIASES[code] || COUNTRY_ALIASES[name] || null;
+  }
+  return null;
+}
 
 /* ── State ─────────────────────────────────────── */
 let mode       = 'manual'; // 'manual' | 'sow'
@@ -766,17 +885,58 @@ function toggleSelectAll(){
 }
 
 function addManual(){
-  const name = document.getElementById('addName').value.trim();
-  const iso3 = document.getElementById('addISO').value.trim().toUpperCase();
+  const raw = document.getElementById('addName').value.trim();
   clearMsg('addMsg');
-  if(!name){ showMsg('addMsg','err','Enter a country name.'); return; }
-  if(iso3.length!==3){ showMsg('addMsg','err','ISO-3 code must be exactly 3 letters.'); return; }
-  if(countries.find(c=>c.iso3===iso3)){ showMsg('addMsg','err',iso3+' already in the list.'); return; }
-  countries.push({name, iso3, selected:true});
+  if(!raw){ showMsg('addMsg','err','Enter one or more country names, separated by commas.'); return; }
+
+  const names = raw.split(',').map(s=>s.trim()).filter(Boolean);
+  const overrideIso = document.getElementById('addISO').value.trim().toUpperCase();
+
+  let selectedCount=0, addedCount=0, alreadyCount=0;
+  const unresolved=[];
+
+  names.forEach(nm=>{
+    const nmLower = nm.toLowerCase();
+    let existing = countries.find(c=>c.name.toLowerCase()===nmLower || c.iso3.toLowerCase()===nmLower);
+
+    if(!existing){
+      // Also match by resolving the typed name to an ISO-3 and checking
+      // whether that code is already in the list (e.g. typed "USA" but
+      // the grid already has it as "United States").
+      const iso3Guess = (names.length===1 && overrideIso.length===3) ? overrideIso : resolveCountryIso3(nm);
+      if(iso3Guess) existing = countries.find(c=>c.iso3===iso3Guess);
+    }
+
+    if(existing){
+      if(existing.selected){ alreadyCount++; }
+      else { existing.selected=true; selectedCount++; }
+      return;
+    }
+
+    const iso3 = (names.length===1 && overrideIso.length===3) ? overrideIso : resolveCountryIso3(nm);
+    if(iso3){
+      countries.push({name: ISO3_TO_NAME[iso3] || nm, iso3, selected:true});
+      addedCount++;
+    } else {
+      unresolved.push(nm);
+    }
+  });
+
   buildGrid();
   document.getElementById('addName').value='';
   document.getElementById('addISO').value='';
   document.getElementById('countryGrid').scrollTop=9999;
+
+  if(unresolved.length){
+    showMsg('addMsg','warn',
+      `Could not recognize: ${unresolved.join(', ')}. Try the full country name, or enter its ISO-3 code in the box next to it (one at a time).`);
+  } else {
+    const parts=[];
+    if(selectedCount) parts.push(`${selectedCount} selected`);
+    if(addedCount) parts.push(`${addedCount} added`);
+    if(alreadyCount) parts.push(`${alreadyCount} already selected`);
+    showMsg('addMsg','ok', parts.join(', ')+'.');
+  }
 }
 
 /* ── Slots ──────────────────────────────────────── */

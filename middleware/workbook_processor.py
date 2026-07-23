@@ -840,6 +840,22 @@ def _find_slot_file(slot_info: Dict, refs_dir: Path) -> Optional[Path]:
     return None
 
 
+_VERSION_MARKER_RE = re.compile(r'\bV\d+\b', re.IGNORECASE)
+
+
+def _clean_output_basename(stem: str) -> str:
+    """
+    Normalize a grounded file's name for use in the generated output
+    filename: strips a "myConcerto_" template prefix and replaces any
+    version marker (V1, V2, V10, ...) with "v1" — the output is always
+    a fresh v1 artifact of that generation, independent of whatever
+    version the source template itself happened to be.
+    """
+    name = re.sub(r'^myConcerto_', '', stem, flags=re.IGNORECASE)
+    name = _VERSION_MARKER_RE.sub('v1', name)
+    return name
+
+
 def load_workbook_for_editing(ref_file_path: str) -> Optional[openpyxl.Workbook]:
     """
     Load a workbook in fully writable (eager) mode — required for the
@@ -1032,7 +1048,7 @@ async def run_workbook_generation(
 
             if xlsx_bytes:
                 country_codes = "_".join(c.get("iso3", "") for c in in_scope_countries[:5])
-                base_name = Path(slot_info.get("file_name", f"Workbook_{slot_num}")).stem
+                base_name = _clean_output_basename(Path(slot_info.get("file_name", f"Workbook_{slot_num}")).stem)
                 out_name = f"{base_name}_{country_codes}.xlsx"
                 results.append({
                     "slot": slot_num,
